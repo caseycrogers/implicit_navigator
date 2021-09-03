@@ -86,6 +86,7 @@ class _MyHomePageState extends State<MyHomePage> {
         builder: (context, value, animation, secondaryAnimation) {
           if (value == 0) {
             return ImplicitNavigator.fromNotifier<int>(
+              key: PageStorageKey('animal_navigator'),
               valueNotifier: _currAnimalIndex,
               builder: (context, animalIndex, animation, secondaryAnimation) {
                 return AnimalWidget(
@@ -98,6 +99,7 @@ class _MyHomePageState extends State<MyHomePage> {
           }
           if (value == 1) {
             return ImplicitNavigator.fromNotifier<Color>(
+              key: PageStorageKey('color_navigator'),
               valueNotifier: _currColor,
               builder: (
                 context,

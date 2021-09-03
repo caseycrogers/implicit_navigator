@@ -84,24 +84,48 @@ class ImplicitNavigator<T> extends StatefulWidget {
   final void Function(T poppedValue, T newValue)? onPop;
 
   @override
-  _ImplicitNavigatorState createState() => _ImplicitNavigatorState<T>();
+  ImplicitNavigatorState createState() => ImplicitNavigatorState<T>();
 }
 
-class _ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
-  late final List<_StackEntry<T>> _stack = [
-    _StackEntry(widget.depth, widget.value),
-  ];
+class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
+  late final ImplicitNavigatorState? parent =
+      _isRoot ? null : ImplicitNavigatorState.of(context);
+
+  late final List<_StackEntry<T>> _stack;
+  final Set<ImplicitNavigatorState> _children = {};
+
+  bool initialized = false;
 
   bool get _isRoot {
-    return context
-            .findAncestorStateOfType<_ImplicitNavigatorState<dynamic>>() ==
+    return context.findAncestorStateOfType<ImplicitNavigatorState<dynamic>>() ==
         null;
+  }
+
+  static ImplicitNavigatorState of<T>(BuildContext context) {
+    return context.findAncestorStateOfType<ImplicitNavigatorState<T>>()!;
+  }
+
+  @override
+  void didChangeDependencies() {
+    if (!initialized) {
+      dynamic cachedStack = PageStorage.of(context)!.readState(context);
+      if (cachedStack is List<_StackEntry<T>>) {
+        _stack = cachedStack;
+      } else {
+        _stack = [
+          _StackEntry(widget.depth, widget.value),
+        ];
+      }
+      initialized = true;
+    }
+    super.didChangeDependencies();
   }
 
   @override
   void didUpdateWidget(covariant ImplicitNavigator<T> oldWidget) {
     // Only update the stack if the new value is distinct.
-    if (widget.value != _stack.last.value || widget.depth != _stack.last.depth) {
+    if (widget.value != _stack.last.value ||
+        widget.depth != _stack.last.depth) {
       setState(() {
         final _StackEntry<T> newEntry = _StackEntry(widget.depth, widget.value);
         if (widget.depth != null) {
@@ -110,13 +134,32 @@ class _ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
           );
         }
         _stack.add(newEntry);
+        PageStorage.of(context)!.writeState(context, _stack);
       });
     }
     super.didUpdateWidget(oldWidget);
   }
 
   @override
+  void dispose() {
+    parent?.removeChild(this);
+    super.dispose();
+  }
+
+  void registerChild(ImplicitNavigatorState child) => _children.add(child);
+
+  void removeChild(ImplicitNavigatorState child) => _children.remove(child);
+
+  @override
   Widget build(BuildContext context) {
+    final PageStorageBucket parentBucket = PageStorage.of(context)!;
+    if (!_isRoot) {
+      if (_BackButtonStatus.of(context).isPopEnabled) {
+        parent!.registerChild(this);
+      } else {
+        parent!.removeChild(this);
+      }
+    }
     return WillPopScope(
       onWillPop: _isRoot
           ? () async {
@@ -126,6 +169,9 @@ class _ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
       child: Navigator(
         pages: _stack.map((stackEntry) {
           return _ImplicitNavigatorPage<T>(
+            // Bypass the page route's internal bucket so that we share state
+            // across pages.
+            bucket: parentBucket,
             key: ValueKey(stackEntry),
             value: stackEntry.value,
             builder: widget.builder,
@@ -150,6 +196,7 @@ class _ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     }
     setState(() {
       final T poppedValue = _stack.removeLast().value;
+      PageStorage.of(context)!.writeState(context, _stack);
       widget.onPop?.call(poppedValue, _stack.last.value);
     });
     return true;
@@ -160,40 +207,27 @@ class _ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   /// Navigators are tested in reverse level order-the most nested navigators
   /// attempt to pop first. Returns true if popping is successful.
   Future<bool> _levelOrderPop() async {
-    final List<MapEntry<int, Element>> queue = [];
-    final List<MapEntry<int, _ImplicitNavigatorState>> states = [
+    final List<MapEntry<int, ImplicitNavigatorState>> queue = [
       MapEntry(0, this),
     ];
-    context.visitChildElements((element) {
-      queue.add(MapEntry(1, element));
-    });
+    final List<MapEntry<int, ImplicitNavigatorState>> states = [];
 
     while (queue.isNotEmpty) {
-      final MapEntry<int, Element> entry = queue.removeLast();
-      final Element element = entry.value;
-      if (element.widget is _BackButtonStatus &&
-          !(element.widget as _BackButtonStatus).isPopEnabled) {
-        // This part of the widget tree is ignoring the back button-skip it.
-        continue;
-      }
-      int depth = entry.key;
-      if (element is StatefulElement &&
-          element.state is _ImplicitNavigatorState) {
-        depth += 1;
-        states.add(
-          MapEntry(depth, element.state as _ImplicitNavigatorState),
-        );
-      }
-      entry.value.visitChildElements((element) {
-        queue.add(MapEntry(depth, element));
-      });
+      final MapEntry<int, ImplicitNavigatorState> entry = queue.removeLast();
+      states.add(entry);
+      queue.addAll(
+        entry.value._children.map((navigator) {
+          return MapEntry(entry.key + 1, navigator);
+        }),
+      );
     }
 
     states.sort((a, b) {
       return -a.key.compareTo(b.key);
     });
+    print(states);
     return states
-            .map<_ImplicitNavigatorState?>((entry) => entry.value)
+            .map<ImplicitNavigatorState?>((entry) => entry.value)
             .firstWhere((state) => state!._pop(), orElse: () => null) !=
         null;
   }
@@ -221,6 +255,7 @@ class _StackEntry<T> {
 
 class _ImplicitNavigatorPage<T> extends Page<T> {
   _ImplicitNavigatorPage({
+    required this.bucket,
     required this.value,
     required this.builder,
     this.transitionsBuilder,
@@ -249,13 +284,15 @@ class _ImplicitNavigatorPage<T> extends Page<T> {
 
   final bool isPopEnabled;
 
+  final PageStorageBucket bucket;
+
   @override
   Route<T> createRoute(BuildContext context) {
     return _ImplicitNavigatorRoute(this);
   }
 }
 
-class _ImplicitNavigatorRoute<T> extends PageRoute<T> {
+class _ImplicitNavigatorRoute<T> extends ModalRoute<T> {
   _ImplicitNavigatorRoute(this._page);
 
   _ImplicitNavigatorPage<T> _page;
@@ -269,9 +306,13 @@ class _ImplicitNavigatorRoute<T> extends PageRoute<T> {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
   ) {
-    return _BackButtonStatus(
-      isPopEnabled: _page.isPopEnabled,
-      child: _page.builder(context, _page.value, animation, secondaryAnimation),
+    return PageStorage(
+      bucket: _page.bucket,
+      child: _BackButtonStatus(
+        isPopEnabled: _page.isPopEnabled,
+        child:
+            _page.builder(context, _page.value, animation, secondaryAnimation),
+      ),
     );
   }
 
@@ -309,18 +350,21 @@ class _ImplicitNavigatorRoute<T> extends PageRoute<T> {
   Duration get transitionDuration => _page.transitionDuration;
 }
 
-class _BackButtonStatus extends StatelessWidget {
+class _BackButtonStatus extends InheritedWidget {
   const _BackButtonStatus({
     Key? key,
     required this.isPopEnabled,
     required this.child,
-  }) : super(key: key);
+  }) : super(key: key, child: child);
 
   final bool isPopEnabled;
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return child;
+  bool updateShouldNotify(covariant _BackButtonStatus oldWidget) {
+    return oldWidget.isPopEnabled == isPopEnabled;
   }
+
+  static _BackButtonStatus of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_BackButtonStatus>()!;
 }
