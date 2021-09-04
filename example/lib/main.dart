@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -33,24 +31,23 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-final Random _rng = Random(0);
-
-Color _randomColor() {
-  return Colors.primaries[_rng.nextInt(Colors.primaries.length)];
-}
-
 class _MyHomePageState extends State<MyHomePage> {
   final ValueNotifier<int> _currAnimalIndex = ValueNotifier(0);
-  final ValueNotifier<Color> _currColor = ValueNotifier(_randomColor());
+  final ValueNotifier<Color> _currColor =
+      ValueNotifier(ColorWidget.colors.first.value);
 
   VoidCallback? _tabListener;
 
-  void _incrementIndex() {
+  void _increment() {
     if (_tabIndex == 0) {
       _currAnimalIndex.value = _currAnimalIndex.value + 1;
       return;
     } else if (_tabIndex == 1) {
-      _currColor.value = _randomColor();
+      final int newIndex = (ColorWidget.colors
+                  .indexWhere((entry) => entry.value == _currColor.value) +
+              1) %
+          ColorWidget.colors.length;
+      _currColor.value = ColorWidget.colors[newIndex].value;
     }
   }
 
@@ -63,69 +60,91 @@ class _MyHomePageState extends State<MyHomePage> {
     super.didChangeDependencies();
   }
 
+  // Manually construct the initial value.
+  late String _navigatorStackString =
+      '$_tabIndex > ${AnimalWidget.animals[_currAnimalIndex.value]}';
+
+  late ImplicitNavigatorState _rootNavigator;
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('test'),
-        bottom: TabBar(
-          tabs: [
-            Tab(icon: Icon(Icons.pets)),
-            Tab(icon: Icon(Icons.people)),
-            Tab(icon: Icon(Icons.info)),
-          ],
+    return NotificationListener<ImplicitNavigatorNotification>(
+      onNotification: (notification) {
+        Future.delayed(Duration(milliseconds: 10)).whenComplete(() {
+          setState(() {
+            _navigatorStackString = _navigatorTreeString;
+          });
+        });
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_navigatorStackString),
+          bottom: TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.pets)),
+              Tab(icon: Icon(Icons.color_lens)),
+              Tab(icon: Icon(Icons.info)),
+            ],
+          ),
         ),
-      ),
-      body: ImplicitNavigator<int>(
-        value: _tabIndex,
-        // Back button should always return to index 0.
-        depth: _tabIndex == 0 ? 0 : 1,
-        onPop: (poppedIndex, newIndex) {
-          _tabIndex = newIndex;
-        },
-        builder: (context, value, animation, secondaryAnimation) {
-          if (value == 0) {
-            return ImplicitNavigator.fromNotifier<int>(
-              key: PageStorageKey('animal_navigator'),
-              valueNotifier: _currAnimalIndex,
-              builder: (context, animalIndex, animation, secondaryAnimation) {
-                return AnimalWidget(
-                  value: animalIndex,
-                  animation: animation,
-                  secondaryAnimation: secondaryAnimation,
-                );
-              },
+        body: ImplicitNavigator<int>(
+          value: _tabIndex,
+          // Back button should always return to index 0.
+          depth: _tabIndex == 0 ? 0 : 1,
+          onPop: (poppedIndex, newIndex) {
+            _tabIndex = newIndex;
+          },
+          builder: (context, value, animation, secondaryAnimation) {
+            // We can only get the root navigator from an interior context. Get
+            // a reference here so that the notification listener can access it.
+            _rootNavigator = ImplicitNavigator.of(context, root: true);
+            if (value == 0) {
+              return ImplicitNavigator.fromNotifier<int>(
+                key: PageStorageKey('animal_navigator'),
+                valueNotifier: _currAnimalIndex,
+                builder: (context, animalIndex, animation, secondaryAnimation) {
+                  return AnimalWidget(
+                    value: animalIndex,
+                    animation: animation,
+                    secondaryAnimation: secondaryAnimation,
+                  );
+                },
+              );
+            }
+            if (value == 1) {
+              return ImplicitNavigator.fromNotifier<Color>(
+                  key: PageStorageKey('color_navigator'),
+                  valueNotifier: _currColor,
+                  builder: (
+                    context,
+                    color,
+                    animation,
+                    secondaryAnimation,
+                  ) {
+                    return ColorWidget(color: color);
+                  },
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  });
+            }
+            return Center(
+              child: Text(
+                'This is a demo of `ImplicitNavigator`!',
+                style: TextStyle(fontSize: 24),
+              ),
             );
-          }
-          if (value == 1) {
-            return ImplicitNavigator.fromNotifier<Color>(
-              key: PageStorageKey('color_navigator'),
-              valueNotifier: _currColor,
-              builder: (
-                context,
-                color,
-                animation,
-                secondaryAnimation,
-              ) {
-                return Container(color: color);
-              },
-            );
-          }
-          return Center(
-            child: Text(
-              'This is a demo of `ImplicitNavigator`!',
-              style: TextStyle(fontSize: 24),
-            ),
-          );
-        },
+          },
+        ),
+        floatingActionButton: _tabIndex != 2
+            ? FloatingActionButton(
+                onPressed: _increment,
+                tooltip: 'Increment',
+                child: Icon(Icons.navigate_next),
+              )
+            : null,
       ),
-      floatingActionButton: _tabIndex != 2
-          ? FloatingActionButton(
-              onPressed: _incrementIndex,
-              tooltip: 'Increment',
-              child: Icon(Icons.navigate_next),
-            )
-          : null,
     );
   }
 
@@ -133,6 +152,43 @@ class _MyHomePageState extends State<MyHomePage> {
 
   set _tabIndex(int newValue) =>
       DefaultTabController.of(context)!.index = newValue;
+
+  String get _navigatorTreeString {
+    return _rootNavigator.navigatorTree
+        .map((navigators) => navigators.single)
+        .map((navigator) {
+      if (navigator.value is int && navigator != _rootNavigator) {
+        return AnimalWidget
+            .animals[(navigator.value as int) % AnimalWidget.animals.length];
+      }
+      if (navigator.value is MaterialColor) {
+        return ColorWidget.colors
+            .firstWhere((entry) => entry.value == navigator.value)
+            .key;
+      }
+      return navigator.value;
+    }).join(' > ');
+  }
+}
+
+class ColorWidget extends StatelessWidget {
+  const ColorWidget({Key? key, required this.color}) : super(key: key);
+
+  static final List<MapEntry<String, Color>> colors = {
+    'red': Colors.red,
+    'purple': Colors.purple,
+    'blue': Colors.blue,
+    'green': Colors.green,
+    'yellow': Colors.yellow,
+    'orange': Colors.orange,
+  }.entries.toList(growable: false);
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(color: color);
+  }
 }
 
 class AnimalWidget extends StatelessWidget {
@@ -143,7 +199,7 @@ class AnimalWidget extends StatelessWidget {
     required this.secondaryAnimation,
   }) : super(key: key);
 
-  static const List<String> _animals = [
+  static const List<String> animals = [
     'purple goat',
     'blue octopus',
     'red cat',
@@ -160,8 +216,8 @@ class AnimalWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String color = _animals[value % _animals.length].split(' ').first;
-    final String animal = _animals[value % _animals.length].split(' ').last;
+    final String color = animals[value % animals.length].split(' ').first;
+    final String animal = animals[value % animals.length].split(' ').last;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [

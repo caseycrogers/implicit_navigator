@@ -83,31 +83,59 @@ class ImplicitNavigator<T> extends StatefulWidget {
 
   final void Function(T poppedValue, T newValue)? onPop;
 
+  static ImplicitNavigatorState of<T>(
+    BuildContext context, {
+    bool root = false,
+  }) {
+    if (root) {
+      return context.findRootAncestorStateOfType<ImplicitNavigatorState<T>>()!;
+    }
+    return context.findAncestorStateOfType<ImplicitNavigatorState<T>>()!;
+  }
+
   @override
   ImplicitNavigatorState createState() => ImplicitNavigatorState<T>();
 }
 
 class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   late final ImplicitNavigatorState? parent =
-      _isRoot ? null : ImplicitNavigatorState.of(context);
+      isRoot ? null : ImplicitNavigator.of(context);
 
   late final List<_StackEntry<T>> _stack;
   final Set<ImplicitNavigatorState> _children = {};
 
-  bool initialized = false;
+  bool _initialized = false;
 
-  bool get _isRoot {
+  T get value => _stack.last.value;
+
+  int? get depth => _stack.last.depth;
+
+  bool get isRoot {
     return context.findAncestorStateOfType<ImplicitNavigatorState<dynamic>>() ==
         null;
   }
 
-  static ImplicitNavigatorState of<T>(BuildContext context) {
-    return context.findAncestorStateOfType<ImplicitNavigatorState<T>>()!;
+  bool get canPop {
+    return _stack.length > 1;
+  }
+
+  bool get treeCanPop {
+    return canPop || _children.any((child) => child.treeCanPop);
+  }
+
+  List<ImplicitNavigatorState> get children =>
+      _children.toList(growable: false);
+
+  List<List<ImplicitNavigatorState>> get navigatorTree {
+    return [
+      [this],
+      ..._children.expand((child) => child.navigatorTree),
+    ];
   }
 
   @override
   void didChangeDependencies() {
-    if (!initialized) {
+    if (!_initialized) {
       dynamic cachedStack = PageStorage.of(context)!.readState(context);
       if (cachedStack is List<_StackEntry<T>>) {
         _stack = cachedStack;
@@ -116,7 +144,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
           _StackEntry(widget.depth, widget.value),
         ];
       }
-      initialized = true;
+      _initialized = true;
     }
     super.didChangeDependencies();
   }
@@ -128,13 +156,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
         widget.depth != _stack.last.depth) {
       setState(() {
         final _StackEntry<T> newEntry = _StackEntry(widget.depth, widget.value);
-        if (widget.depth != null) {
-          _stack.removeWhere(
-            (entry) => entry.depth == null || entry.depth! >= widget.depth!,
-          );
-        }
-        _stack.add(newEntry);
-        PageStorage.of(context)!.writeState(context, _stack);
+        _pushEntry(newEntry);
       });
     }
     super.didUpdateWidget(oldWidget);
@@ -153,7 +175,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   @override
   Widget build(BuildContext context) {
     final PageStorageBucket parentBucket = PageStorage.of(context)!;
-    if (!_isRoot) {
+    if (!isRoot) {
       if (_BackButtonStatus.of(context).isPopEnabled) {
         parent!.registerChild(this);
       } else {
@@ -161,9 +183,9 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
       }
     }
     return WillPopScope(
-      onWillPop: _isRoot
+      onWillPop: isRoot
           ? () async {
-              return !(await _levelOrderPop());
+              return !popFromTree();
             }
           : null,
       child: Navigator(
@@ -184,52 +206,68 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
           );
         }).toList(),
         onPopPage: (route, result) {
-          return _pop();
+          return pop();
         },
       ),
     );
   }
 
-  bool _pop() {
+  /// Attempt to pop from this navigator.
+  bool pop() {
     if (_stack.length == 1) {
       return false;
     }
     setState(() {
-      final T poppedValue = _stack.removeLast().value;
-      PageStorage.of(context)!.writeState(context, _stack);
+      final T poppedValue = _popEntry();
       widget.onPop?.call(poppedValue, _stack.last.value);
     });
     return true;
   }
 
-  /// Attempt to pop from any of the Value Navigators in the widget tree.
+  /// Attempt to pop from any implicit navigators in this navigator's
+  /// [navigatorTree].
   ///
   /// Navigators are tested in reverse level order-the most nested navigators
   /// attempt to pop first. Returns true if popping is successful.
-  Future<bool> _levelOrderPop() async {
-    final List<MapEntry<int, ImplicitNavigatorState>> queue = [
-      MapEntry(0, this),
-    ];
-    final List<MapEntry<int, ImplicitNavigatorState>> states = [];
+  bool popFromTree() {
+    return navigatorTree.reversed
+        .expand((navigators) => navigators)
+        // `any` short circuits when it finds a true element so this will stop
+        // calling pop if any call to pop succeeds.
+        .any((navigator) => navigator.pop());
+  }
 
-    while (queue.isNotEmpty) {
-      final MapEntry<int, ImplicitNavigatorState> entry = queue.removeLast();
-      states.add(entry);
-      queue.addAll(
-        entry.value._children.map((navigator) {
-          return MapEntry(entry.key + 1, navigator);
-        }),
+  void _pushEntry(_StackEntry<T> newEntry) {
+    _StackEntry<T> prevEntry = _stack.last;
+    if (newEntry.depth != null) {
+      _stack.removeWhere(
+        (entry) => entry.depth == null || entry.depth! >= newEntry.depth!,
       );
     }
-
-    states.sort((a, b) {
-      return -a.key.compareTo(b.key);
+    _stack.add(newEntry);
+    PageStorage.of(context)!.writeState(context, _stack);
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
+      PushNotification<T>(
+        currentValue: newEntry.value,
+        currentDepth: newEntry.depth,
+        previousValue: prevEntry.value,
+        previousDepth: prevEntry.depth,
+      ).dispatch(context);
     });
-    print(states);
-    return states
-            .map<ImplicitNavigatorState?>((entry) => entry.value)
-            .firstWhere((state) => state!._pop(), orElse: () => null) !=
-        null;
+  }
+
+  T _popEntry() {
+    final _StackEntry<T> poppedEntry = _stack.removeLast();
+    PageStorage.of(context)!.writeState(context, _stack);
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
+      PopNotification<T>(
+        currentValue: _stack.last.value,
+        currentDepth: _stack.last.depth,
+        previousValue: poppedEntry.value,
+        previousDepth: poppedEntry.depth,
+      ).dispatch(context);
+    });
+    return poppedEntry.value;
   }
 }
 
@@ -239,6 +277,49 @@ typedef AnimatedWidgetBuilder<T> = Widget Function(
   Animation<double> animation,
   Animation<double> secondaryAnimation,
 );
+
+abstract class ImplicitNavigatorNotification<T> extends Notification {
+  ImplicitNavigatorNotification({
+    required this.currentValue,
+    required this.currentDepth,
+    required this.previousValue,
+    required this.previousDepth,
+  });
+
+  final T currentValue;
+  final int? currentDepth;
+
+  final T previousValue;
+  final int? previousDepth;
+}
+
+class PopNotification<T> extends ImplicitNavigatorNotification<T> {
+  PopNotification({
+    required T currentValue,
+    required int? currentDepth,
+    required T previousValue,
+    required int? previousDepth,
+  }) : super(
+          currentValue: currentValue,
+          currentDepth: currentDepth,
+          previousValue: previousValue,
+          previousDepth: previousDepth,
+        );
+}
+
+class PushNotification<T> extends ImplicitNavigatorNotification<T> {
+  PushNotification({
+    required T currentValue,
+    required int? currentDepth,
+    required T previousValue,
+    required int? previousDepth,
+  }) : super(
+          currentValue: currentValue,
+          currentDepth: currentDepth,
+          previousValue: previousValue,
+          previousDepth: previousDepth,
+        );
+}
 
 @immutable
 class _StackEntry<T> {
