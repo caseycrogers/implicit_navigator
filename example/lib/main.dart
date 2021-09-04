@@ -8,7 +8,6 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -24,6 +23,8 @@ class MyApp extends StatelessWidget {
   }
 }
 
+/// An example app that uses [ImplicitNavigator] to create a two-level nested
+/// navigation flow.
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key? key}) : super(key: key);
 
@@ -70,10 +71,11 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return NotificationListener<ImplicitNavigatorNotification>(
       onNotification: (notification) {
-        Future.delayed(Duration(milliseconds: 10)).whenComplete(() {
-          setState(() {
-            _navigatorStackString = _navigatorTreeString;
-          });
+        // We can listen on notifications from Implicit Navigator. Here we
+        // update a string representation of the current screen whenever a new
+        // notification comes in.
+        setState(() {
+          _navigatorStackString = _navigatorTreeString;
         });
         return false;
       },
@@ -89,6 +91,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
         body: ImplicitNavigator<int>(
+          key: ValueKey('tab_navigator'),
           value: _tabIndex,
           // Back button should always return to index 0.
           depth: _tabIndex == 0 ? 0 : 1,
@@ -157,37 +160,17 @@ class _MyHomePageState extends State<MyHomePage> {
     return _rootNavigator.navigatorTree
         .map((navigators) => navigators.single)
         .map((navigator) {
-      if (navigator.value is int && navigator != _rootNavigator) {
+      if ((navigator.widget.key as ValueKey).value == 'animal_navigator') {
         return AnimalWidget
             .animals[(navigator.value as int) % AnimalWidget.animals.length];
       }
-      if (navigator.value is MaterialColor) {
+      if ((navigator.widget.key as ValueKey).value == 'color_navigator') {
         return ColorWidget.colors
             .firstWhere((entry) => entry.value == navigator.value)
             .key;
       }
       return navigator.value;
     }).join(' > ');
-  }
-}
-
-class ColorWidget extends StatelessWidget {
-  const ColorWidget({Key? key, required this.color}) : super(key: key);
-
-  static final List<MapEntry<String, Color>> colors = {
-    'red': Colors.red,
-    'purple': Colors.purple,
-    'blue': Colors.blue,
-    'green': Colors.green,
-    'yellow': Colors.yellow,
-    'orange': Colors.orange,
-  }.entries.toList(growable: false);
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(color: color);
   }
 }
 
@@ -200,14 +183,14 @@ class AnimalWidget extends StatelessWidget {
   }) : super(key: key);
 
   static const List<String> animals = [
-    'purple goat',
-    'blue octopus',
-    'red cat',
-    'orange monkey',
-    'yellow lemur',
-    'purple fish',
-    'brown dodo',
-    'grey sparrow',
+    'gregarious goat',
+    'optimistic octopus',
+    'crazy cat',
+    'mean monkey',
+    'lecherous lemur',
+    'fast fish',
+    'dead dodo',
+    'small sparrow',
   ];
 
   final int value;
@@ -245,6 +228,26 @@ class AnimalWidget extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class ColorWidget extends StatelessWidget {
+  const ColorWidget({Key? key, required this.color}) : super(key: key);
+
+  static final List<MapEntry<String, Color>> colors = {
+    'red': Colors.red,
+    'purple': Colors.purple,
+    'blue': Colors.blue,
+    'green': Colors.green,
+    'yellow': Colors.yellow,
+    'orange': Colors.orange,
+  }.entries.toList(growable: false);
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(color: color);
   }
 }
 

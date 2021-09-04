@@ -127,15 +127,25 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
       _children.toList(growable: false);
 
   List<List<ImplicitNavigatorState>> get navigatorTree {
+    if (!_isActive) {
+      // This navigator is not at the top of it's parent navigator so it's tree
+      // should be treated as empty.
+      return [];
+    }
     return [
       [this],
       ..._children.expand((child) => child.navigatorTree),
     ];
   }
 
+  bool get _isActive {
+    return ModalRoute.of(context)!.isCurrent;
+  }
+
   @override
   void didChangeDependencies() {
     if (!_initialized) {
+      parent?.registerChild(this);
       dynamic cachedStack = PageStorage.of(context)!.readState(context);
       if (cachedStack is List<_StackEntry<T>>) {
         _stack = cachedStack;
@@ -175,13 +185,6 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   @override
   Widget build(BuildContext context) {
     final PageStorageBucket parentBucket = PageStorage.of(context)!;
-    if (!isRoot) {
-      if (_BackButtonStatus.of(context).isPopEnabled) {
-        parent!.registerChild(this);
-      } else {
-        parent!.removeChild(this);
-      }
-    }
     return WillPopScope(
       onWillPop: isRoot
           ? () async {
@@ -387,13 +390,11 @@ class _ImplicitNavigatorRoute<T> extends ModalRoute<T> {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
   ) {
+    // We intentionally pass the parent bucket through here so that separate
+    // implicit navigator pages can share page storage state.
     return PageStorage(
       bucket: _page.bucket,
-      child: _BackButtonStatus(
-        isPopEnabled: _page.isPopEnabled,
-        child:
-            _page.builder(context, _page.value, animation, secondaryAnimation),
-      ),
+      child: _page.builder(context, _page.value, animation, secondaryAnimation),
     );
   }
 
@@ -429,23 +430,4 @@ class _ImplicitNavigatorRoute<T> extends ModalRoute<T> {
 
   @override
   Duration get transitionDuration => _page.transitionDuration;
-}
-
-class _BackButtonStatus extends InheritedWidget {
-  const _BackButtonStatus({
-    Key? key,
-    required this.isPopEnabled,
-    required this.child,
-  }) : super(key: key, child: child);
-
-  final bool isPopEnabled;
-  final Widget child;
-
-  @override
-  bool updateShouldNotify(covariant _BackButtonStatus oldWidget) {
-    return oldWidget.isPopEnabled == isPopEnabled;
-  }
-
-  static _BackButtonStatus of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<_BackButtonStatus>()!;
 }
