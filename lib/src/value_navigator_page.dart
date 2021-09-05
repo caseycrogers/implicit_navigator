@@ -11,7 +11,6 @@ class ValueNavigatorPage<T> extends Page<T> {
     required this.transitionDuration,
     required this.maintainState,
     required this.opaque,
-    required this.isPopEnabled,
     LocalKey? key,
     String? name,
     Object? arguments,
@@ -30,8 +29,6 @@ class ValueNavigatorPage<T> extends Page<T> {
   final Duration transitionDuration;
   final bool maintainState;
   final bool opaque;
-
-  final bool isPopEnabled;
 
   final PageStorageBucket bucket;
 

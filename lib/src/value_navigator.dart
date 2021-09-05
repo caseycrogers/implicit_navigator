@@ -49,12 +49,10 @@ class ValueNavigator<T> extends StatefulWidget {
     );
   }
 
-  static Widget defaultRouteTransitionsBuilder(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
+  static Widget defaultRouteTransitionsBuilder(BuildContext context,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,) {
     return FadeTransition(
       opacity: ReverseAnimation(secondaryAnimation),
       child: FadeTransition(
@@ -85,8 +83,7 @@ class ValueNavigator<T> extends StatefulWidget {
 
   final void Function(T poppedValue, T newValue)? onPop;
 
-  static ValueNavigatorState of<T>(
-    BuildContext context, {
+  static ValueNavigatorState of<T>(BuildContext context, {
     bool root = false,
   }) {
     ValueNavigatorState? navigator;
@@ -113,7 +110,7 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
 
   late final ValueNavigatorState? parent = isRoot
       ? null
-      // Don't use `.of()` here as that'd just return this.
+  // Don't use `.of()` here as that'd just return this.
       : context.findAncestorStateOfType<ValueNavigatorState>();
 
   late final List<_StackEntry<T>> _stack;
@@ -136,7 +133,8 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
   }
 
   bool get treeCanPop {
-    return canPop || _children.any((child) => child.treeCanPop);
+    return navigatorTree.expand((navigators) => navigators).any((
+        navigator) => navigator.canPop);
   }
 
   List<ValueNavigatorState> get children => _children.toList(growable: false);
@@ -155,8 +153,11 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
 
   bool _disabled = false;
 
-  bool get isActive {
-    return !_disabled && ModalRoute.of(context)!.isCurrent;
+  void enable() {
+    if (_disabled) {
+      _disabled = false;
+      _onTreeChanged();
+    }
   }
 
   void disable() {
@@ -166,11 +167,8 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
     }
   }
 
-  void enable() {
-    if (_disabled) {
-      _disabled = false;
-      _onTreeChanged();
-    }
+  bool get isActive {
+    return !_disabled && ModalRoute.of(context)!.isCurrent;
   }
 
   @override
@@ -214,7 +212,9 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
 
   void _onTreeChanged() {
     ValueNavigatorState._displayBackButton.value =
-        ValueNavigator.of(context, root: true).treeCanPop;
+        ValueNavigator
+            .of(context, root: true)
+            .treeCanPop;
   }
 
   void _registerChild(ValueNavigatorState child) => _children.add(child);
@@ -237,8 +237,6 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
           transitionDuration: widget.transitionDuration,
           maintainState: widget.maintainState,
           opaque: widget.opaque,
-          // Only the top entry in the stack is allows to pop.
-          isPopEnabled: stackEntry == _stack.last,
         );
       }).toList(),
       onPopPage: (route, result) {
@@ -276,8 +274,8 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
   bool popFromTree() {
     return navigatorTree.reversed
         .expand((navigators) => navigators)
-        // `any` short circuits when it finds a true element so this will stop
-        // calling pop if any call to pop succeeds.
+    // `any` short circuits when it finds a true element so this will stop
+    // calling pop if any call to pop succeeds.
         .any((navigator) => navigator.pop());
   }
 
@@ -285,7 +283,7 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
     _StackEntry<T> prevEntry = _stack.last;
     if (newEntry.depth != null) {
       _stack.removeWhere(
-        (entry) => entry.depth == null || entry.depth! >= newEntry.depth!,
+            (entry) => entry.depth == null || entry.depth! >= newEntry.depth!,
       );
     }
     _stack.add(newEntry);
@@ -322,24 +320,11 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
 }
 
 typedef AnimatedWidgetBuilder<T> = Widget Function(
-  BuildContext context,
-  T value,
-  Animation<double> animation,
-  Animation<double> secondaryAnimation,
-);
-
-@immutable
-class _StackEntry<T> {
-  _StackEntry(this.depth, this.value);
-
-  final int? depth;
-  final T value;
-
-  @override
-  String toString() {
-    return '{\'depth\': $depth, \'value:\': $value}';
-  }
-}
+    BuildContext context,
+    T value,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    );
 
 class ValueNavigatorBackButton extends StatelessWidget {
   const ValueNavigatorBackButton({
@@ -372,7 +357,23 @@ class ValueNavigatorBackButton extends StatelessWidget {
           },
         );
       },
-      child: BackButton(onPressed: ValueNavigatorState._backButtonOnPressed),
+      child: BackButton(
+        // Nested function call to avoid late initialization error.
+        onPressed: () => ValueNavigatorState._backButtonOnPressed(),
+      ),
     );
+  }
+}
+
+@immutable
+class _StackEntry<T> {
+  _StackEntry(this.depth, this.value);
+
+  final int? depth;
+  final T value;
+
+  @override
+  String toString() {
+    return '{\'depth\': $depth, \'value:\': $value}';
   }
 }
