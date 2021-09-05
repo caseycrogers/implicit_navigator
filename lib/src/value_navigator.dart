@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-class ImplicitNavigator<T> extends StatefulWidget {
-  const ImplicitNavigator({
+import 'navigator_notification.dart';
+import 'value_navigator_page.dart';
+
+class ValueNavigator<T> extends StatefulWidget {
+  const ValueNavigator({
     Key? key,
     required this.value,
     this.depth,
@@ -29,7 +31,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     return ValueListenableBuilder<T>(
       valueListenable: valueNotifier,
       builder: (context, value, _) {
-        return ImplicitNavigator<T>(
+        return ValueNavigator<T>(
           key: key,
           value: value,
           depth: getDepth?.call(value),
@@ -83,36 +85,50 @@ class ImplicitNavigator<T> extends StatefulWidget {
 
   final void Function(T poppedValue, T newValue)? onPop;
 
-  static ImplicitNavigatorState of<T>(
+  static ValueNavigatorState of<T>(
     BuildContext context, {
     bool root = false,
   }) {
-    if (root) {
-      return context.findRootAncestorStateOfType<ImplicitNavigatorState<T>>()!;
+    ValueNavigatorState? navigator;
+    if (context is StatefulElement && context.state is ValueNavigatorState) {
+      navigator = context.state as ValueNavigatorState;
     }
-    return context.findAncestorStateOfType<ImplicitNavigatorState<T>>()!;
+    if (root) {
+      navigator =
+          context.findRootAncestorStateOfType<ValueNavigatorState<T>>() ??
+              navigator;
+    } else {
+      navigator ??= context.findAncestorStateOfType<ValueNavigatorState<T>>();
+    }
+    return navigator!;
   }
 
   @override
-  ImplicitNavigatorState createState() => ImplicitNavigatorState<T>();
+  ValueNavigatorState createState() => ValueNavigatorState<T>();
 }
 
-class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
-  late final ImplicitNavigatorState? parent =
-      isRoot ? null : ImplicitNavigator.of(context);
+class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
+  static final ValueNotifier<bool> _displayBackButton = ValueNotifier(false);
+  static late VoidCallback _backButtonOnPressed;
+
+  late final ValueNavigatorState? parent = isRoot
+      ? null
+      // Don't use `.of()` here as that'd just return this.
+      : context.findAncestorStateOfType<ValueNavigatorState>();
 
   late final List<_StackEntry<T>> _stack;
-  final Set<ImplicitNavigatorState> _children = {};
+  final Set<ValueNavigatorState> _children = {};
 
   bool _initialized = false;
+
+  List<T> get history => _stack.map((entry) => entry.value).toList();
 
   T get value => _stack.last.value;
 
   int? get depth => _stack.last.depth;
 
   bool get isRoot {
-    return context.findAncestorStateOfType<ImplicitNavigatorState<dynamic>>() ==
-        null;
+    return context.findAncestorStateOfType<ValueNavigatorState>() == null;
   }
 
   bool get canPop {
@@ -123,11 +139,10 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     return canPop || _children.any((child) => child.treeCanPop);
   }
 
-  List<ImplicitNavigatorState> get children =>
-      _children.toList(growable: false);
+  List<ValueNavigatorState> get children => _children.toList(growable: false);
 
-  List<List<ImplicitNavigatorState>> get navigatorTree {
-    if (!_isActive) {
+  List<List<ValueNavigatorState>> get navigatorTree {
+    if (!isActive) {
       // This navigator is not at the top of it's parent navigator so it's tree
       // should be treated as empty.
       return [];
@@ -138,16 +153,35 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     ];
   }
 
-  bool get _isActive {
-    return ModalRoute.of(context)!.isCurrent;
+  bool _disabled = false;
+
+  bool get isActive {
+    return !_disabled && ModalRoute.of(context)!.isCurrent;
+  }
+
+  void disable() {
+    if (!_disabled) {
+      _disabled = true;
+      _onTreeChanged();
+    }
+  }
+
+  void enable() {
+    if (_disabled) {
+      _disabled = false;
+      _onTreeChanged();
+    }
   }
 
   @override
   void didChangeDependencies() {
     if (!_initialized) {
-      parent?.registerChild(this);
+      if (isRoot) {
+        _backButtonOnPressed = popFromTree;
+      }
+      parent?._registerChild(this);
       dynamic cachedStack = PageStorage.of(context)!.readState(context);
-      if (cachedStack is List<_StackEntry<T>>) {
+      if (widget.key is PageStorageKey && cachedStack is List<_StackEntry<T>>) {
         _stack = cachedStack;
       } else {
         _stack = [
@@ -160,7 +194,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   }
 
   @override
-  void didUpdateWidget(covariant ImplicitNavigator<T> oldWidget) {
+  void didUpdateWidget(covariant ValueNavigator<T> oldWidget) {
     // Only update the stack if the new value is distinct.
     if (widget.value != _stack.last.value ||
         widget.depth != _stack.last.depth) {
@@ -174,45 +208,52 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
 
   @override
   void dispose() {
-    parent?.removeChild(this);
+    parent?._removeChild(this);
     super.dispose();
   }
 
-  void registerChild(ImplicitNavigatorState child) => _children.add(child);
+  void _onTreeChanged() {
+    ValueNavigatorState._displayBackButton.value =
+        ValueNavigator.of(context, root: true).treeCanPop;
+  }
 
-  void removeChild(ImplicitNavigatorState child) => _children.remove(child);
+  void _registerChild(ValueNavigatorState child) => _children.add(child);
+
+  void _removeChild(ValueNavigatorState child) => _children.remove(child);
 
   @override
   Widget build(BuildContext context) {
     final PageStorageBucket parentBucket = PageStorage.of(context)!;
-    return WillPopScope(
-      onWillPop: isRoot
-          ? () async {
-              return !popFromTree();
-            }
-          : null,
-      child: Navigator(
-        pages: _stack.map((stackEntry) {
-          return _ImplicitNavigatorPage<T>(
-            // Bypass the page route's internal bucket so that we share state
-            // across pages.
-            bucket: parentBucket,
-            key: ValueKey(stackEntry),
-            value: stackEntry.value,
-            builder: widget.builder,
-            transitionsBuilder: widget.routeTransitionsBuilder,
-            transitionDuration: widget.transitionDuration,
-            maintainState: widget.maintainState,
-            opaque: widget.opaque,
-            // Only the top entry in the stack is allows to pop.
-            isPopEnabled: stackEntry == _stack.last,
-          );
-        }).toList(),
-        onPopPage: (route, result) {
-          return pop();
-        },
-      ),
+    Widget internalNavigator = Navigator(
+      pages: _stack.map((stackEntry) {
+        return ValueNavigatorPage<T>(
+          // Bypass the page route's internal bucket so that we share state
+          // across pages.
+          bucket: parentBucket,
+          key: ValueKey(stackEntry),
+          value: stackEntry.value,
+          builder: widget.builder,
+          transitionsBuilder: widget.routeTransitionsBuilder,
+          transitionDuration: widget.transitionDuration,
+          maintainState: widget.maintainState,
+          opaque: widget.opaque,
+          // Only the top entry in the stack is allows to pop.
+          isPopEnabled: stackEntry == _stack.last,
+        );
+      }).toList(),
+      onPopPage: (route, result) {
+        return pop();
+      },
     );
+    if (isRoot) {
+      return WillPopScope(
+        onWillPop: () async {
+          return !popFromTree();
+        },
+        child: internalNavigator,
+      );
+    }
+    return internalNavigator;
   }
 
   /// Attempt to pop from this navigator.
@@ -227,7 +268,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     return true;
   }
 
-  /// Attempt to pop from any implicit navigators in this navigator's
+  /// Attempt to pop from any value navigators in this navigator's
   /// [navigatorTree].
   ///
   /// Navigators are tested in reverse level order-the most nested navigators
@@ -248,8 +289,11 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
       );
     }
     _stack.add(newEntry);
-    PageStorage.of(context)!.writeState(context, _stack);
+    if (widget.key is PageStorageKey) {
+      PageStorage.of(context)!.writeState(context, _stack);
+    }
     WidgetsBinding.instance!.addPostFrameCallback((_) {
+      _onTreeChanged();
       PushNotification<T>(
         currentValue: newEntry.value,
         currentDepth: newEntry.depth,
@@ -261,8 +305,11 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
 
   T _popEntry() {
     final _StackEntry<T> poppedEntry = _stack.removeLast();
-    PageStorage.of(context)!.writeState(context, _stack);
+    if (widget.key is PageStorageKey) {
+      PageStorage.of(context)!.writeState(context, _stack);
+    }
     WidgetsBinding.instance!.addPostFrameCallback((_) {
+      _onTreeChanged();
       PopNotification<T>(
         currentValue: _stack.last.value,
         currentDepth: _stack.last.depth,
@@ -281,49 +328,6 @@ typedef AnimatedWidgetBuilder<T> = Widget Function(
   Animation<double> secondaryAnimation,
 );
 
-abstract class ImplicitNavigatorNotification<T> extends Notification {
-  ImplicitNavigatorNotification({
-    required this.currentValue,
-    required this.currentDepth,
-    required this.previousValue,
-    required this.previousDepth,
-  });
-
-  final T currentValue;
-  final int? currentDepth;
-
-  final T previousValue;
-  final int? previousDepth;
-}
-
-class PopNotification<T> extends ImplicitNavigatorNotification<T> {
-  PopNotification({
-    required T currentValue,
-    required int? currentDepth,
-    required T previousValue,
-    required int? previousDepth,
-  }) : super(
-          currentValue: currentValue,
-          currentDepth: currentDepth,
-          previousValue: previousValue,
-          previousDepth: previousDepth,
-        );
-}
-
-class PushNotification<T> extends ImplicitNavigatorNotification<T> {
-  PushNotification({
-    required T currentValue,
-    required int? currentDepth,
-    required T previousValue,
-    required int? previousDepth,
-  }) : super(
-          currentValue: currentValue,
-          currentDepth: currentDepth,
-          previousValue: previousValue,
-          previousDepth: previousDepth,
-        );
-}
-
 @immutable
 class _StackEntry<T> {
   _StackEntry(this.depth, this.value);
@@ -337,97 +341,38 @@ class _StackEntry<T> {
   }
 }
 
-class _ImplicitNavigatorPage<T> extends Page<T> {
-  _ImplicitNavigatorPage({
-    required this.bucket,
-    required this.value,
-    required this.builder,
-    this.transitionsBuilder,
-    required this.transitionDuration,
-    required this.maintainState,
-    required this.opaque,
-    required this.isPopEnabled,
-    LocalKey? key,
-    String? name,
-    Object? arguments,
-    String? restorationId,
-  }) : super(
-          key: key,
-          name: name,
-          arguments: arguments,
-          restorationId: restorationId,
-        );
-
-  final T value;
-  final AnimatedWidgetBuilder<T> builder;
-  final RouteTransitionsBuilder? transitionsBuilder;
+class ValueNavigatorBackButton extends StatelessWidget {
+  const ValueNavigatorBackButton({
+    this.transitionDuration = const Duration(milliseconds: 100),
+    Key? key,
+  }) : super(key: key);
 
   final Duration transitionDuration;
-  final bool maintainState;
-  final bool opaque;
-
-  final bool isPopEnabled;
-
-  final PageStorageBucket bucket;
 
   @override
-  Route<T> createRoute(BuildContext context) {
-    return _ImplicitNavigatorRoute(this);
-  }
-}
-
-class _ImplicitNavigatorRoute<T> extends ModalRoute<T> {
-  _ImplicitNavigatorRoute(this._page);
-
-  _ImplicitNavigatorPage<T> _page;
-
-  @override
-  RouteSettings get settings => _page;
-
-  @override
-  Widget buildPage(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-  ) {
-    // We intentionally pass the parent bucket through here so that separate
-    // implicit navigator pages can share page storage state.
-    return PageStorage(
-      bucket: _page.bucket,
-      child: _page.builder(context, _page.value, animation, secondaryAnimation),
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: ValueNavigatorState._displayBackButton,
+      builder: (context, shouldDisplay, backButton) {
+        return AnimatedSwitcher(
+          duration: transitionDuration,
+          child: Visibility(
+            key: ValueKey(shouldDisplay),
+            visible: shouldDisplay,
+            child: backButton!,
+          ),
+          transitionBuilder: (child, animation) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(-1, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+        );
+      },
+      child: BackButton(onPressed: ValueNavigatorState._backButtonOnPressed),
     );
   }
-
-  @override
-  Widget buildTransitions(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    Widget child,
-  ) {
-    return (_page.transitionsBuilder ?? super.buildTransitions)(
-      context,
-      animation,
-      secondaryAnimation,
-      child,
-    );
-  }
-
-  @override
-  Color? get barrierColor => null;
-
-  @override
-  bool get barrierDismissible => false;
-
-  @override
-  String? get barrierLabel => null;
-
-  @override
-  bool get maintainState => _page.maintainState;
-
-  @override
-  bool get opaque => _page.opaque;
-
-  @override
-  Duration get transitionDuration => _page.transitionDuration;
 }

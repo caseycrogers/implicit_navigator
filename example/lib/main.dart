@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:value_navigator/main.dart';
+import 'package:value_navigator/value_navigator.dart';
 
 void main() {
   runApp(MyApp());
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// An example app that uses [ImplicitNavigator] to create a two-level nested
+/// An example app that uses [ValueNavigator] to create a two-level nested
 /// navigation flow.
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key? key}) : super(key: key);
@@ -65,13 +65,13 @@ class _MyHomePageState extends State<MyHomePage> {
   late String _navigatorStackString =
       '$_tabIndex > ${AnimalWidget.animals[_currAnimalIndex.value]}';
 
-  late ImplicitNavigatorState _rootNavigator;
+  late ValueNavigatorState _rootNavigator;
 
   @override
   Widget build(BuildContext context) {
-    return NotificationListener<ImplicitNavigatorNotification>(
+    return NotificationListener<ValueNavigatorNotification>(
       onNotification: (notification) {
-        // We can listen on notifications from Implicit Navigator. Here we
+        // We can listen on notifications from Value Navigator. Here we
         // update a string representation of the current screen whenever a new
         // notification comes in.
         setState(() {
@@ -81,6 +81,7 @@ class _MyHomePageState extends State<MyHomePage> {
       },
       child: Scaffold(
         appBar: AppBar(
+          leading: ValueNavigatorBackButton(),
           title: Text(_navigatorStackString),
           bottom: TabBar(
             tabs: [
@@ -90,7 +91,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ],
           ),
         ),
-        body: ImplicitNavigator<int>(
+        body: ValueNavigator<int>(
           key: ValueKey('tab_navigator'),
           value: _tabIndex,
           // Back button should always return to index 0.
@@ -101,9 +102,13 @@ class _MyHomePageState extends State<MyHomePage> {
           builder: (context, value, animation, secondaryAnimation) {
             // We can only get the root navigator from an interior context. Get
             // a reference here so that the notification listener can access it.
-            _rootNavigator = ImplicitNavigator.of(context, root: true);
+            _rootNavigator = ValueNavigator.of(context, root: true);
             if (value == 0) {
-              return ImplicitNavigator.fromNotifier<int>(
+              return ValueNavigator.fromNotifier<int>(
+                // If you pass in a PageStorageKey, ValueNavigator will share
+                // value history across all instances with the page storage.
+                // This means that the animal navigator will retain its history
+                // when you navigate to another tab and then navigate back.
                 key: PageStorageKey('animal_navigator'),
                 valueNotifier: _currAnimalIndex,
                 builder: (context, animalIndex, animation, secondaryAnimation) {
@@ -116,8 +121,12 @@ class _MyHomePageState extends State<MyHomePage> {
               );
             }
             if (value == 1) {
-              return ImplicitNavigator.fromNotifier<Color>(
-                  key: PageStorageKey('color_navigator'),
+              return ValueNavigator.fromNotifier<Color>(
+                  // If you don't pass in a PageStorageKey, ValueNavigator will
+                  // use separate value histories for each instance.
+                  // This means that the color navigator will have a fresh
+                  // history if you navigate away and then navigate back.
+                  key: ValueKey('color_navigator'),
                   valueNotifier: _currColor,
                   builder: (
                     context,
@@ -134,7 +143,7 @@ class _MyHomePageState extends State<MyHomePage> {
             }
             return Center(
               child: Text(
-                'This is a demo of `ImplicitNavigator`!',
+                'This is a demo of `ValueNavigator`!',
                 style: TextStyle(fontSize: 24),
               ),
             );
@@ -159,17 +168,19 @@ class _MyHomePageState extends State<MyHomePage> {
   String get _navigatorTreeString {
     return _rootNavigator.navigatorTree
         .map((navigators) => navigators.single)
-        .map((navigator) {
-      if ((navigator.widget.key as ValueKey).value == 'animal_navigator') {
-        return AnimalWidget
-            .animals[(navigator.value as int) % AnimalWidget.animals.length];
-      }
-      if ((navigator.widget.key as ValueKey).value == 'color_navigator') {
-        return ColorWidget.colors
-            .firstWhere((entry) => entry.value == navigator.value)
-            .key;
-      }
-      return navigator.value;
+        .expand((navigator) {
+      return navigator.history.map((value) {
+        if ((navigator.widget.key as ValueKey).value == 'animal_navigator') {
+          return AnimalWidget
+              .animals[(value as int) % AnimalWidget.animals.length];
+        }
+        if ((navigator.widget.key as ValueKey).value == 'color_navigator') {
+          return ColorWidget.colors
+              .firstWhere((entry) => entry.value == value)
+              .key;
+        }
+        return value;
+      });
     }).join(' > ');
   }
 }
