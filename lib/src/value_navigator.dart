@@ -9,6 +9,7 @@ class ValueNavigator<T> extends StatefulWidget {
     Key? key,
     required this.value,
     this.depth,
+    this.initialHistory,
     required this.builder,
     this.routeTransitionsBuilder = defaultRouteTransitionsBuilder,
     this.transitionDuration = const Duration(milliseconds: 300),
@@ -21,6 +22,7 @@ class ValueNavigator<T> extends StatefulWidget {
     Key? key,
     required ValueNotifier<T> valueNotifier,
     int Function(T value)? getDepth,
+    List<ValueHistoryEntry<T>>? initialHistory,
     required AnimatedWidgetBuilder<T> builder,
     RouteTransitionsBuilder transitionsBuilder = defaultRouteTransitionsBuilder,
     Duration transitionDuration = const Duration(milliseconds: 300),
@@ -35,12 +37,13 @@ class ValueNavigator<T> extends StatefulWidget {
           key: key,
           value: value,
           depth: getDepth?.call(value),
+          initialHistory: initialHistory,
           builder: builder,
           routeTransitionsBuilder: transitionsBuilder,
           transitionDuration: transitionDuration,
           onPop: (poppedValue, newValue) {
-            onPop?.call(poppedValue, newValue);
             valueNotifier.value = newValue;
+            onPop?.call(poppedValue, newValue);
           },
           maintainState: maintainState,
           opaque: opaque,
@@ -65,6 +68,8 @@ class ValueNavigator<T> extends StatefulWidget {
   final T value;
 
   final int? depth;
+
+  final List<ValueHistoryEntry<T>>? initialHistory;
 
   /// TODO().
   final AnimatedWidgetBuilder<T> builder;
@@ -113,10 +118,8 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
   // Don't use `.of()` here as that'd just return this.
       : context.findAncestorStateOfType<ValueNavigatorState>();
 
-  late final List<_StackEntry<T>> _stack;
+  late final List<ValueHistoryEntry<T>> _stack;
   final Set<ValueNavigatorState> _children = {};
-
-  bool _initialized = false;
 
   List<T> get history => _stack.map((entry) => entry.value).toList();
 
@@ -133,8 +136,9 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
   }
 
   bool get treeCanPop {
-    return navigatorTree.expand((navigators) => navigators).any((
-        navigator) => navigator.canPop);
+    return navigatorTree
+        .expand((navigators) => navigators)
+        .any((navigator) => navigator.canPop);
   }
 
   List<ValueNavigatorState> get children => _children.toList(growable: false);
@@ -172,36 +176,47 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
   }
 
   @override
-  void didChangeDependencies() {
-    if (!_initialized) {
-      if (isRoot) {
-        _backButtonOnPressed = popFromTree;
-      }
-      parent?._registerChild(this);
-      dynamic cachedStack = PageStorage.of(context)!.readState(context);
-      if (widget.key is PageStorageKey && cachedStack is List<_StackEntry<T>>) {
-        _stack = cachedStack;
-      } else {
-        _stack = [
-          _StackEntry(widget.depth, widget.value),
-        ];
-      }
-      _initialized = true;
+  void initState() {
+    if (isRoot) {
+      _backButtonOnPressed = popFromTree;
     }
-    super.didChangeDependencies();
+    parent?._registerChild(this);
+    final ValueHistoryEntry<T> entry =
+    ValueHistoryEntry(widget.depth, widget.value);
+    dynamic cachedStack = PageStorage.of(context)!.readState(context);
+    if (widget.key is PageStorageKey &&
+        cachedStack is List<ValueHistoryEntry<T>>) {
+      _stack = cachedStack;
+    } else if (widget.initialHistory != null) {
+      _stack = widget.initialHistory!;
+      // Ensure initial history gets cached.
+      PageStorage.of(context)!.writeState(context, _stack);
+    } else {
+      _stack = [entry];
+    }
+    // We need to check if the current value is distinct from the last
+    // cached value.
+    _addIfNew(entry);
+    // Ensure this is called even if `addIfNew` did not call it.
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
+      _onTreeChanged();
+    });
+    super.initState();
   }
 
   @override
   void didUpdateWidget(covariant ValueNavigator<T> oldWidget) {
-    // Only update the stack if the new value is distinct.
+    setState(() {
+      _addIfNew(ValueHistoryEntry(widget.depth, widget.value));
+    });
+    super.didUpdateWidget(oldWidget);
+  }
+
+  void _addIfNew(ValueHistoryEntry<T> newEntry) {
     if (widget.value != _stack.last.value ||
         widget.depth != _stack.last.depth) {
-      setState(() {
-        final _StackEntry<T> newEntry = _StackEntry(widget.depth, widget.value);
-        _pushEntry(newEntry);
-      });
+      _pushEntry(newEntry);
     }
-    super.didUpdateWidget(oldWidget);
   }
 
   @override
@@ -279,8 +294,8 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
         .any((navigator) => navigator.pop());
   }
 
-  void _pushEntry(_StackEntry<T> newEntry) {
-    _StackEntry<T> prevEntry = _stack.last;
+  void _pushEntry(ValueHistoryEntry<T> newEntry) {
+    ValueHistoryEntry<T> prevEntry = _stack.last;
     if (newEntry.depth != null) {
       _stack.removeWhere(
             (entry) => entry.depth == null || entry.depth! >= newEntry.depth!,
@@ -302,7 +317,7 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
   }
 
   T _popEntry() {
-    final _StackEntry<T> poppedEntry = _stack.removeLast();
+    final ValueHistoryEntry<T> poppedEntry = _stack.removeLast();
     if (widget.key is PageStorageKey) {
       PageStorage.of(context)!.writeState(context, _stack);
     }
@@ -366,8 +381,8 @@ class ValueNavigatorBackButton extends StatelessWidget {
 }
 
 @immutable
-class _StackEntry<T> {
-  _StackEntry(this.depth, this.value);
+class ValueHistoryEntry<T> {
+  ValueHistoryEntry(this.depth, this.value);
 
   final int? depth;
   final T value;
