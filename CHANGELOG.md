@@ -6,6 +6,6 @@
 
 * Formatting changes to chase those sweet sweet pub points.
 
-## [0.0.2] - 09/07/2021
+## [0.0.3] - 09/07/2021
 
-* Negligible readme changes.
+* Readme and documentation changes.
