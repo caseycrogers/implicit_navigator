@@ -1,9 +1,9 @@
 import 'package:flutter/widgets.dart';
 
-import 'value_navigator.dart';
+import 'implicit_navigator.dart';
 
-class ValueNavigatorPage<T> extends Page<T> {
-  ValueNavigatorPage({
+class ImplicitNavigatorPage<T> extends Page<T> {
+  ImplicitNavigatorPage({
     required this.bucket,
     required this.value,
     required this.builder,
@@ -34,14 +34,14 @@ class ValueNavigatorPage<T> extends Page<T> {
 
   @override
   Route<T> createRoute(BuildContext context) {
-    return _ValueNavigatorRoute(this);
+    return _ImplicitNavigatorRoute(this);
   }
 }
 
-class _ValueNavigatorRoute<T> extends ModalRoute<T> {
-  _ValueNavigatorRoute(this._page);
+class _ImplicitNavigatorRoute<T> extends ModalRoute<T> {
+  _ImplicitNavigatorRoute(this._page);
 
-  ValueNavigatorPage<T> _page;
+  ImplicitNavigatorPage<T> _page;
 
   @override
   RouteSettings get settings => _page;
@@ -53,7 +53,7 @@ class _ValueNavigatorRoute<T> extends ModalRoute<T> {
       Animation<double> secondaryAnimation,
       ) {
     // We intentionally pass the parent bucket through here so that separate
-    // value navigator pages can share page storage state.
+    // implicit navigator pages can share page storage state.
     return PageStorage(
       bucket: _page.bucket,
       child: _page.builder(context, _page.value, animation, secondaryAnimation),

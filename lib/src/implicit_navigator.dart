@@ -2,10 +2,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'navigator_notification.dart';
-import 'value_navigator_page.dart';
+import 'implicit_navigator_page.dart';
 
-class ValueNavigator<T> extends StatefulWidget {
-  const ValueNavigator({
+class ImplicitNavigator<T> extends StatefulWidget {
+  const ImplicitNavigator({
     this.key,
     required this.value,
     this.depth,
@@ -19,7 +19,7 @@ class ValueNavigator<T> extends StatefulWidget {
   })  : _valueNotifier = null,
         _getDepth = null;
 
-  ValueNavigator.fromNotifier({
+  ImplicitNavigator.fromNotifier({
     this.key,
     required ValueNotifier<T> valueNotifier,
     int Function(T value)? getDepth,
@@ -55,7 +55,7 @@ class ValueNavigator<T> extends StatefulWidget {
 
   /// See [Widget.key].
   ///
-  /// If key is a [PageStorageKey], value navigator will use page storage to
+  /// If key is a [PageStorageKey], this widget will use page storage to
   /// save and (on reinitialization) restore it's history stack.
   final Key? key;
 
@@ -71,14 +71,14 @@ class ValueNavigator<T> extends StatefulWidget {
   ///
   /// When pushing a new value to the history stack, the new value will be
   /// pushed as a replacement to all entries of equal or greater depth.
-  /// If [ValueNavigator] is rebuilt with a new [depth] and unchanged [value], a
+  /// If [ImplicitNavigator] is rebuilt with a new [depth] and unchanged [value], a
   /// page will still be pushed to the stack.
   ///
   /// Values with a depth of null are always appended to the end of the stack,
   /// including after any other values of null depth.
   final int? depth;
 
-  /// A history stack to initialize this [ValueNavigator] with.
+  /// A history stack to initialize this [ImplicitNavigator] with.
   ///
   /// If a `PageStorageKey` is provided and a cached history stack is available
   /// at initialization, the cached stack will be used and [initialHistory] will
@@ -106,31 +106,32 @@ class ValueNavigator<T> extends StatefulWidget {
   /// A callback that runs immediately after a page is popped.
   final void Function(T poppedValue, T newValue)? onPop;
 
-  /// Get the nearest ancestor [ValueNavigatorState] in the widget tree.
-  static ValueNavigatorState of<T>(
+  /// Get the nearest ancestor [ImplicitNavigatorState] in the widget tree.
+  static ImplicitNavigatorState of<T>(
     BuildContext context, {
     bool root = false,
   }) {
-    ValueNavigatorState? navigator;
-    if (context is StatefulElement && context.state is ValueNavigatorState) {
-      navigator = context.state as ValueNavigatorState;
+    ImplicitNavigatorState? navigator;
+    if (context is StatefulElement && context.state is ImplicitNavigatorState) {
+      navigator = context.state as ImplicitNavigatorState;
     }
     if (root) {
       navigator =
-          context.findRootAncestorStateOfType<ValueNavigatorState<T>>() ??
+          context.findRootAncestorStateOfType<ImplicitNavigatorState<T>>() ??
               navigator;
     } else {
-      navigator ??= context.findAncestorStateOfType<ValueNavigatorState<T>>();
+      navigator ??=
+          context.findAncestorStateOfType<ImplicitNavigatorState<T>>();
     }
     return navigator!;
   }
 
   @override
-  ValueNavigatorState createState() => ValueNavigatorState<T>();
+  ImplicitNavigatorState createState() => ImplicitNavigatorState<T>();
 }
 
-class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
-  // This state is used by `ValueNavigatorBackButton` to tell if the back button
+class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
+  // This state is used by `ImplicitNavigatorBackButton` to tell if the back button
   // should be displayed.
   // It is static so that it can be accessed from any location in the widget
   // tree.
@@ -140,46 +141,47 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
   ValueNotifier<T>? _valueNotifier;
 
   // Must be a reference and not a getter so that we can call it from `dispose`.
-  late ValueNavigatorState? _parent = isRoot
+  late ImplicitNavigatorState? _parent = isRoot
       ? null
       // Don't use `.of()` here as that'd just return `this`.
-      : context.findAncestorStateOfType<ValueNavigatorState>();
+      : context.findAncestorStateOfType<ImplicitNavigatorState>();
 
   late final List<ValueHistoryEntry<T>> _stack;
-  final Set<ValueNavigatorState> _children = {};
+  final Set<ImplicitNavigatorState> _children = {};
 
-  /// The history of values and depths for this value navigator.
+  /// The history of values and depths for this implicit navigator.
   List<ValueHistoryEntry<T>> get history => List.from(_stack);
 
-  /// Whether or not this value navigator has seen any previous values that it
+  /// Whether or not this implciit navigator has seen any previous values that it
   /// can pop to.
   bool get canPop {
     return _stack.length > 1;
   }
 
-  /// Whether or not this value navigator or any value navigators below it can
-  /// pop.
+  /// Whether or not this implicit navigator or any implicit navigators below it
+  /// can pop.
   bool get treeCanPop {
     return navigatorTree
         .expand((navigators) => navigators)
         .any((navigator) => navigator.canPop);
   }
 
-  /// Whether or not this value is below any other value navigators in the
+  /// Whether or not this value is below any other implicit navigators in the
   /// widget tree.
   bool get isRoot {
-    return context.findAncestorStateOfType<ValueNavigatorState>() == null;
+    return context.findAncestorStateOfType<ImplicitNavigatorState>() == null;
   }
 
-  /// The nearest ancestor value navigator, if any.
-  ValueNavigatorState? get parent => _parent;
+  /// The nearest ancestor implicit navigator, if any.
+  ImplicitNavigatorState<Object?>? get parent => _parent;
 
-  /// All value navigators directly below this one in the widget tree.
-  List<ValueNavigatorState> get children => _children.toList(growable: false);
+  /// All implicit navigators directly below this one in the widget tree.
+  List<ImplicitNavigatorState<Object?>> get children =>
+      _children.toList(growable: false);
 
-  /// A tree of this value navigator and all active (see [isActive]) value
+  /// A tree of this implicit navigator and all active (see [isActive]) value
   /// navigators currently in the widget tree below it.
-  List<List<ValueNavigatorState>> get navigatorTree {
+  List<List<ImplicitNavigatorState<Object?>>> get navigatorTree {
     if (!isActive) {
       // This navigator is currently disabled or in an inactive page route. It
       // is technically in the widget tree, but it's
@@ -193,11 +195,11 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
 
   bool _disabled = false;
 
-  /// Set this value navigator and all those below it to ignore attempts to pop
+  /// Set this implicit navigator and all those below it to ignore attempts to pop
   /// (including from the system back button).
   ///
-  /// Disable a value navigator if you wish to take it off stage and as such do
-  /// not want it intercepting calls to pop. eg if you have a value navigator
+  /// Disable a implicit navigator if you wish to take it off stage and as such do
+  /// not want it intercepting calls to pop. eg if you have a implcit navigator
   /// inside of a [PageView], you would not want it popping while it is not on
   /// screen.
   void disablePop() {
@@ -207,7 +209,7 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
     }
   }
 
-  /// If this value navigator is currently disabled, enable it.
+  /// If this implicit navigator is currently disabled, enable it.
   void enablePop() {
     if (_disabled) {
       _disabled = false;
@@ -215,8 +217,8 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
     }
   }
 
-  /// Whether or not this value navigator is enabled AND is currently at the top
-  /// of all parent value navigator's history stacks.
+  /// Whether or not this implicit navigator is enabled AND is currently at the top
+  /// of all parent implicit navigator's history stacks.
   bool get isActive {
     return !_disabled &&
         ModalRoute.of(context)!.isCurrent &&
@@ -273,7 +275,7 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
   }
 
   @override
-  void didUpdateWidget(covariant ValueNavigator<T> oldWidget) {
+  void didUpdateWidget(covariant ImplicitNavigator<T> oldWidget) {
     if (_valueNotifier != oldWidget._valueNotifier) {
       _maybeDisposeNotifier();
       _maybeInitNotifier();
@@ -317,7 +319,7 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
     final PageStorageBucket parentBucket = PageStorage.of(context)!;
     Widget internalNavigator = Navigator(
       pages: _stack.map((stackEntry) {
-        return ValueNavigatorPage<T>(
+        return ImplicitNavigatorPage<T>(
           // Bypass the page route's internal bucket so that we share state
           // across pages.
           bucket: parentBucket,
@@ -345,7 +347,7 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
     return internalNavigator;
   }
 
-  /// Attempt to pop from any value navigators in this navigator's
+  /// Attempt to pop from any implicit navigators in this navigator's
   /// [navigatorTree].
   ///
   /// Navigators are tested in reverse level order-the most nested navigators
@@ -368,9 +370,9 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
     return ValueHistoryEntry(widget.depth, widget.value);
   }
 
-  void _registerChild(ValueNavigatorState child) => _children.add(child);
+  void _registerChild(ImplicitNavigatorState child) => _children.add(child);
 
-  void _removeChild(ValueNavigatorState child) => _children.remove(child);
+  void _removeChild(ImplicitNavigatorState child) => _children.remove(child);
 
   void _pushEntry(ValueHistoryEntry<T> newEntry) {
     ValueHistoryEntry<T> prevEntry = _stack.last;
@@ -412,8 +414,8 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
   }
 
   void _updateDisplayBackButton() {
-    ValueNavigatorState._displayBackButton.value =
-        ValueNavigator.of(context, root: true).treeCanPop;
+    ImplicitNavigatorState._displayBackButton.value =
+        ImplicitNavigator.of(context, root: true).treeCanPop;
   }
 }
 
@@ -432,8 +434,8 @@ typedef AnimatedValueWidgetBuilder<T> = Widget Function(
   Animation<double> secondaryAnimation,
 );
 
-class ValueNavigatorBackButton extends StatelessWidget {
-  const ValueNavigatorBackButton({
+class ImplicitNavigatorBackButton extends StatelessWidget {
+  const ImplicitNavigatorBackButton({
     this.transitionDuration = const Duration(milliseconds: 100),
     Key? key,
   }) : super(key: key);
@@ -443,7 +445,7 @@ class ValueNavigatorBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
-      valueListenable: ValueNavigatorState._displayBackButton,
+      valueListenable: ImplicitNavigatorState._displayBackButton,
       builder: (context, shouldDisplay, backButton) {
         return AnimatedSwitcher(
           duration: transitionDuration,
@@ -465,7 +467,7 @@ class ValueNavigatorBackButton extends StatelessWidget {
       },
       child: BackButton(
         // Nested function call to avoid late initialization error.
-        onPressed: () => ValueNavigatorState._backButtonOnPressed(),
+        onPressed: () => ImplicitNavigatorState._backButtonOnPressed(),
       ),
     );
   }

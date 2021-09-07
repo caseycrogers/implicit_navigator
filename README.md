@@ -1,37 +1,62 @@
-# value_navigator
+# implicit_navigator
 
+Intuitive and highly flexible navigation with an easy to use API.
 
-Provides an intuitive and highly flexible navigation with an easy to use API. Value Navigator was created as
-substitute for the existing Navigator 1.0 and 2.0 APIs.
+The navigator page stack is updated implicitly in response to data model changes and the system back button, just build
+your widget tree and Implicit Navigator will handle the rest!
 
 ## Core Features
 
-Value Navigator has three core features that set it apart from the official
-Flutter solutions:
+Implicit Navigator has three core features that set it apart from the official Flutter solution(s):
 
-- The navigator stack is constructed and appended to implicitly as the app's data models and widget tree change.
-- Web browser (back button undoes last change) and app (back button goes "up" in a developer-defined navigation
-hierarchy) style navigation are both supported out of the box.
-- Nesting navigators in the widget tree has first class support with the system back button always popping from the
+1. The navigator stack is constructed and appended to implicitly as the app's data models and widget tree change.
+2. "App-style" and "browser-style" navigation are both supported out of the box:
+   * **App-Style** - back button goes "up" in a developer-defined navigation hierarchy, potentially undoing multiple
+state changes.
+   * **Browser-Style** - back button reverts the last state change
+3. Nesting navigators in the widget tree has first class support with the system back button always popping from the
 inner most navigator first.
 
 ## How It Works
 
-Value Navigator is built on top of the Flutter Navigator 2.0 API. Value Navigators operate similar to
-`ValueListenableBuilder`: each one has a value and a builder. Whenever a new value is supplied, a new page is added to
-the internal navigator's page stack. When pop is called (by the system or programmatically), the top most page is popped
-and the builder is called with the previous value. An `onPop` callback can be used to revert any state used outside of
-the navigator.
+Implicit Navigator is built on top of the Flutter Navigator 2.0 API. Implicit Navigators operate similar to
+`ValueListenableBuilder`: each one takes in a changing value and a builder. Whenever a new value is supplied, a new page
+is added to the internal navigator's page stack. When pop is called (by the system or programmatically), the top most
+page is popped and the builder is called with the previous value. An `onPop` callback can be used to revert any state
+used outside of the navigator.
 
-When the system back button is called, `ValueNavigator` attempts to pop from the deepest navigator in the tree, working
-it's way up to the root navigator until it finds a navigator that can handle the pop.
+As a convenience method, `ImplicitNavigator.fromNotifier` wraps a `ValueNotifier`. It pushes to the navigator stack when
+the notifier changes and rolls the value of the notifier back when pop is called.
 
-`ValueNavigator` takes an optional `depth` parameter which represents where the user currently is in the
-app's navigation flow. When a non-null depth is specified, the navigator stack is rebuilt with all
-entries of greater depth removed. eg a value of depth 2 will replace any existing stack entries of depth 2 or greater.
-When pop is called, the navigator state will return to the last seen value with a lower depth. This emulates "app style"
-navigation where popping takes the user "up" in the navigation flow.
-For browser style navigation (pop always undoes the last change), leave depth null.
+When the system back button is called (or pop is called programmatically), `ImplicitNavigator` attempts to pop from the
+deepest navigator in the tree, working it's way up to the root navigator until it finds a navigator that can handle the
+pop.
 
-As a convenience, `ValueNavigator.fromNotifier` wraps a `ValueNotifier`. It updates the navigator stack when the
-notifier changes and rolls changes back when pop is called.
+### App-Style Navigation
+
+`ImplicitNavigator` takes an optional `depth` parameter which represents where the user currently is in the app's
+navigation flow. When the back button is pressed, the app state is returned to the last value of lower depth. ie, the
+user moves "up" the navigation flow to a shallower depth.
+
+For example, for an app with two pages: **home** and **details**, **home** would be depth 0 and **details** depth 1. A
+user navigates through the pages as follows:
+    `depth_0:home > depth_1:details(item_a) > depth_1:details(item_b)`
+If the user then presses back (eg in a UI provided back button or with the android system back button), they will go up
+in the navigation flow and return to the home page, NOT to the details page for `item_a`.
+
+If Implicit Navigators are nested within each other in the widget tree, you should build each inner navigator with a
+distinct `PageStorageKey`. Implicit Navigator will then cache and restore the history stack using page storage so if a
+user navigates away from a navigator and then comes back it'll retain it's history stack.
+
+### Browser-Style Navigation
+
+For browser-style navigation, simply leave `depth` null and **do not** provide a `PageStorageKey`. Repeating our
+navigation example from above:
+    `depth_null:home > depth_null:details(item_a) > depth_null:details(item_b)`
+If the user presses back, the last state change (navigate to `item_b`'s details page) will be undone and the app will go
+back to `item_a`'s details page.
+
+## Known Bugs/Limitations
+
+* If you have implicit navigators nested inside each other in the widget tree, inner navigators will fail to rebuild on
+hot reload. You have to forcibly rebuild the page by navigating away and back.

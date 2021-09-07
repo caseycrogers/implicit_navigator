@@ -1,5 +1,5 @@
-name: value_navigator
-description: Value navigator manages your app's navigation stack and response to the system back button for you.
+name: implicit_navigator
+description: Intuitive and highly flexible navigation with an easy to use API.
 
 version: 0.0.1
 

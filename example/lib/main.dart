@@ -1,51 +1,78 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:value_navigator/value_navigator.dart';
+import 'package:value_navigator/implicit_navigator.dart';
 
 void main() {
   runApp(MyApp());
 }
 
+// Global state is bad. Don't do this. I'm only doing it because this is a demo
+// app.
+bool _appStyleNavigation = true;
+int _lastAppStyleIndex = 0;
+int _lastBrowserStyleIndex = 0;
+// These string are displayed as the app bar title. We have to manually
+// construct the initial values because the app bar will be built before the
+// implicit navigators.
+late String _appStackString = 'home > null';
+late String _browserStackString = 'home > null';
+
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: DefaultTabController(
-        length: 3,
-        child: MyHomePage(),
-      ),
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return MaterialApp(
+          title: 'Implicit Navigator Demo',
+          theme: ThemeData(
+            primarySwatch: _appStyleNavigation ? Colors.blue : Colors.red,
+          ),
+          home: DefaultTabController(
+            // This is here to force independent builds of this part of the
+            // widget tree when the navigation style is toggled.
+            key: PageStorageKey('$_appStyleNavigation'),
+            // Default tab controller won't restore itself from page storage so
+            // we manually restore it here.
+            initialIndex: _appStyleNavigation
+                ? _lastAppStyleIndex
+                : _lastBrowserStyleIndex,
+            length: 3,
+            child: MyHomePage(
+              rebuildParent: () => setState(() {}),
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
-/// An example app that uses [ValueNavigator] to create a two-level nested
+/// An example app that uses [ImplicitNavigator] to create a two-level nested
 /// navigation flow.
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key? key}) : super(key: key);
+  const MyHomePage({Key? key, required this.rebuildParent}) : super(key: key);
+
+  final VoidCallback rebuildParent;
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final ValueNotifier<int> _currAnimalIndex = ValueNotifier(0);
-  final ValueNotifier<Color> _currColor =
-      ValueNotifier(ColorWidget.colors.first.value);
+  final ValueNotifier<int?> _currAnimalIndex = ValueNotifier(null);
+  final ValueNotifier<Color?> _currColor = ValueNotifier(null);
 
-  VoidCallback? _tabListener;
+  bool _isInitialized = false;
+  late TabController _tabController = DefaultTabController.of(context)!;
 
   void _increment() {
     if (_tabIndex == 0) {
-      _currAnimalIndex.value = _currAnimalIndex.value + 1;
+      _currAnimalIndex.value = (_currAnimalIndex.value ?? -1) + 1;
       return;
     } else if (_tabIndex == 1) {
-      final int newIndex = (ColorWidget.colors
-                  .indexWhere((entry) => entry.value == _currColor.value) +
+      final int newIndex = (ColorWidget.colors.indexWhere(
+                  (entry) => entry.value == (_currColor.value ?? 0)) +
               1) %
           ColorWidget.colors.length;
       _currColor.value = ColorWidget.colors[newIndex].value;
@@ -54,36 +81,43 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void didChangeDependencies() {
-    if (_tabListener == null) {
-      _tabListener = () => setState(() {});
-      DefaultTabController.of(context)!.addListener(_tabListener!);
+    if (!_isInitialized) {
+      _isInitialized = true;
+      _tabController.addListener(_onTabChanged);
     }
     super.didChangeDependencies();
   }
 
-  // This string is displayed as the app bar title.
-  // We manually construct the initial value.
-  late String _navigatorStackString =
-      '$_tabIndex > ${AnimalWidget.animals[_currAnimalIndex.value]}';
+  @override
+  void dispose() {
+    _tabController.removeListener(_onTabChanged);
+    super.dispose();
+  }
 
-  late ValueNavigatorState _rootNavigator;
+  late ImplicitNavigatorState _rootNavigator;
 
   @override
   Widget build(BuildContext context) {
-    return NotificationListener<ValueNavigatorNotification>(
+    return NotificationListener<ImplicitNavigatorNotification>(
       onNotification: (notification) {
-        // We can listen on notifications from Value Navigator. Here we
+        // We can listen on notifications from Implicit Navigator. Here we
         // update a string representation of the current screen whenever a new
         // notification comes in.
         setState(() {
-          _navigatorStackString = _navigatorTreeString;
+          if (_appStyleNavigation) {
+            _appStackString = _navigatorTreeString;
+          } else {
+            _browserStackString = _navigatorTreeString;
+          }
         });
         return false;
       },
       child: Scaffold(
         appBar: AppBar(
-          leading: ValueNavigatorBackButton(),
-          title: Text(_navigatorStackString),
+          leading: ImplicitNavigatorBackButton(),
+          title: Text(
+            _appStyleNavigation ? _appStackString : _browserStackString,
+          ),
           bottom: TabBar(
             tabs: [
               Tab(icon: Icon(Icons.pets)),
@@ -92,62 +126,95 @@ class _MyHomePageState extends State<MyHomePage> {
             ],
           ),
         ),
-        body: ValueNavigator<int>(
-          key: ValueKey('tab_navigator'),
-          value: _tabIndex,
-          // Back button should always return to index 0.
-          depth: _tabIndex == 0 ? 0 : 1,
-          onPop: (poppedIndex, newIndex) {
-            _tabIndex = newIndex;
-          },
-          builder: (context, value, animation, secondaryAnimation) {
-            // We can only get the root navigator from an interior context. Get
-            // a reference here so that the notification listener can access it.
-            _rootNavigator = ValueNavigator.of(context, root: true);
-            if (value == 0) {
-              return ValueNavigator<int>.fromNotifier(
-                // If you pass in a PageStorageKey, ValueNavigator will share
-                // value history across all instances with the same page
-                // storage.
-                // This means that the animal navigator will retain its history
-                // when you navigate to another tab and then navigate back.
-                // If you want each new instance to have a new history stack,
-                // use a value key or null here instead.
-                key: PageStorageKey('animal_navigator'),
-                valueNotifier: _currAnimalIndex,
-                builder: (context, animalIndex, animation, secondaryAnimation) {
-                  return AnimalWidget(
-                    value: animalIndex,
-                    animation: animation,
-                    secondaryAnimation: secondaryAnimation,
+        body: Column(
+          children: [
+            _navigationStyleSelector,
+            Expanded(
+              child: ImplicitNavigator<int>(
+                key: _appStyleNavigation
+                    ? PageStorageKey('tab_navigator')
+                    : ValueKey('tab_navigator'),
+                value: _tabIndex,
+                // Always set depth to null for browser style navigation.
+                depth: _appStyleNavigation ? _tabIndexDepth(_tabIndex) : null,
+                onPop: (poppedIndex, newIndex) {
+                  _tabIndex = newIndex;
+                },
+                builder: (context, value, animation, secondaryAnimation) {
+                  // We can only get the root navigator from an interior context. Get
+                  // a reference here so that the notification listener can access it.
+                  _rootNavigator = ImplicitNavigator.of(context, root: true);
+                  if (value == 0) {
+                    return ImplicitNavigator<int?>.fromNotifier(
+                      // If you pass in a PageStorageKey, implicit navigator
+                      // will share value history across all instances with the
+                      // same page storage.
+                      // This means that the animal navigator will retain its
+                      // history when you navigate to another tab and then
+                      // navigate back. This is usually desired for app style
+                      // navigation.
+                      key: _appStyleNavigation
+                          ? PageStorageKey('animal_navigator')
+                          : ValueKey('animal_navigator'),
+                      valueNotifier: _currAnimalIndex,
+                      getDepth: _appStyleNavigation ? _animalIndexDepth : null,
+                      builder: (context, animalIndex, animation,
+                          secondaryAnimation) {
+                        if (animalIndex == null) {
+                          return Text(
+                            'Press the floating action button to select an'
+                            'animal!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 36),
+                          );
+                        }
+                        return AnimalWidget(
+                          value: animalIndex,
+                          animation: animation,
+                          secondaryAnimation: secondaryAnimation,
+                        );
+                      },
+                    );
+                  }
+                  if (value == 1) {
+                    return ImplicitNavigator<Color?>.fromNotifier(
+                        key: _appStyleNavigation
+                            ? PageStorageKey('color_navigator')
+                            : ValueKey('color_navigator'),
+                        valueNotifier: _currColor,
+                        getDepth: _appStyleNavigation ? _colorDepth : null,
+                        builder: (
+                          context,
+                          color,
+                          animation,
+                          secondaryAnimation,
+                        ) {
+                          if (color == null) {
+                            return Text(
+                              'Press the floating action button to select a '
+                              'color!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 36),
+                            );
+                          }
+                          return ColorWidget(color: color);
+                        },
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(
+                              opacity: animation, child: child);
+                        });
+                  }
+                  return Center(
+                    child: Text(
+                      'This is a demo of `ImplicitNavigator`!',
+                      style: TextStyle(fontSize: 24),
+                    ),
                   );
                 },
-              );
-            }
-            if (value == 1) {
-              return ValueNavigator<Color>.fromNotifier(
-                  key: PageStorageKey('color_navigator'),
-                  valueNotifier: _currColor,
-                  builder: (
-                    context,
-                    color,
-                    animation,
-                    secondaryAnimation,
-                  ) {
-                    return ColorWidget(color: color);
-                  },
-                  transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(opacity: animation, child: child);
-                  });
-            }
-            return Center(
-              child: Text(
-                'This is a demo of `ValueNavigator`!',
-                style: TextStyle(fontSize: 24),
               ),
-            );
-          },
+            ),
+          ],
         ),
         floatingActionButton: _tabIndex != 2
             ? FloatingActionButton(
@@ -160,28 +227,86 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  int get _tabIndex => DefaultTabController.of(context)!.index;
+  int get _tabIndex => _tabController.index;
 
-  set _tabIndex(int newValue) =>
-      DefaultTabController.of(context)!.index = newValue;
+  set _tabIndex(int newValue) => _tabController.index = newValue;
 
   String get _navigatorTreeString {
     return _rootNavigator.navigatorTree
         .map((navigators) => navigators.single)
         .expand((navigator) {
       return navigator.history.map((entry) {
+        if (entry.value == null) return 'null';
         if ((navigator.widget.key as ValueKey).value == 'animal_navigator') {
+          // Display the text for the current animal.
           return AnimalWidget
-              .animals[(entry.value as int) % AnimalWidget.animals.length];
+              .animals[(entry.value as int) % AnimalWidget.animals.length]
+              .split(' ')
+              .last;
         }
         if ((navigator.widget.key as ValueKey).value == 'color_navigator') {
+          // Display the text for the current color.
           return ColorWidget.colors
               .firstWhere((colorEntry) => colorEntry.value == entry.value)
               .key;
         }
-        return entry.value;
+        if ((navigator.widget.key as ValueKey).value == 'tab_navigator') {
+          // Display the text for the current tab index.
+          return ['animals', 'colors', 'info'][entry.value as int];
+        }
+        throw AssertionError(
+          'Navigator with an unrecognized key ${navigator.widget.key}.',
+        );
       });
     }).join(' > ');
+  }
+
+  // The 0th tab is the home tab so it has a depth of 0. In app style
+  // navigation, the back button goes to the home tab, not the previous tab so
+  // we return a depth of 1 if this index isn't the home tab.
+  int? _tabIndexDepth(int index) {
+    return index == 0 ? 0 : 1;
+  }
+
+  int _animalIndexDepth(int? animalIndex) {
+    return animalIndex == null ? 0 : 1;
+  }
+
+  int _colorDepth(Color? color) {
+    return color == null ? 0 : 1;
+  }
+
+  void _onTabChanged() {
+    if (_appStyleNavigation) {
+      _lastAppStyleIndex = _tabIndex;
+    } else {
+      _lastBrowserStyleIndex = _tabIndex;
+    }
+    setState(() {});
+  }
+
+  Widget get _navigationStyleSelector {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12),
+      color: Theme.of(context).accentColor.withAlpha(150),
+      child: Row(
+        children: [
+          Text(
+            'Navigation Style: ',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          Text('App', style: TextStyle(fontSize: 18)),
+          Switch(
+              value: !_appStyleNavigation,
+              onChanged: (_) {
+                // Change the style and rebuild the widget tree.
+                _appStyleNavigation = !_appStyleNavigation;
+                widget.rebuildParent();
+              }),
+          Text('Browser', style: TextStyle(fontSize: 18)),
+        ],
+      ),
+    );
   }
 }
 
