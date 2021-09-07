@@ -104,11 +104,14 @@ class _MyHomePageState extends State<MyHomePage> {
             // a reference here so that the notification listener can access it.
             _rootNavigator = ValueNavigator.of(context, root: true);
             if (value == 0) {
-              return ValueNavigator.fromNotifier<int>(
+              return ValueNavigator<int>.fromNotifier(
                 // If you pass in a PageStorageKey, ValueNavigator will share
-                // value history across all instances with the page storage.
+                // value history across all instances with the same page
+                // storage.
                 // This means that the animal navigator will retain its history
                 // when you navigate to another tab and then navigate back.
+                // If each new instance should have new history, use a value key
+                // or null here instead.
                 key: PageStorageKey('animal_navigator'),
                 valueNotifier: _currAnimalIndex,
                 builder: (context, animalIndex, animation, secondaryAnimation) {
@@ -121,12 +124,8 @@ class _MyHomePageState extends State<MyHomePage> {
               );
             }
             if (value == 1) {
-              return ValueNavigator.fromNotifier<Color>(
-                  // If you don't pass in a PageStorageKey, ValueNavigator will
-                  // use separate value histories for each instance.
-                  // This means that the color navigator will have a fresh
-                  // history if you navigate away and then navigate back.
-                  key: ValueKey('color_navigator'),
+              return ValueNavigator<Color>.fromNotifier(
+                  key: PageStorageKey('color_navigator'),
                   valueNotifier: _currColor,
                   builder: (
                     context,

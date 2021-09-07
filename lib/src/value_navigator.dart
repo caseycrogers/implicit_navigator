@@ -11,51 +11,38 @@ class ValueNavigator<T> extends StatefulWidget {
     this.depth,
     this.initialHistory,
     required this.builder,
-    this.routeTransitionsBuilder = defaultRouteTransitionsBuilder,
+    this.transitionsBuilder = defaultRouteTransitionsBuilder,
     this.transitionDuration = const Duration(milliseconds: 300),
     this.onPop,
     this.maintainState = false,
     this.opaque = true,
-  }) : super(key: key);
+  })  : _valueNotifier = null,
+        _getDepth = null,
+        super(key: key);
 
-  static Widget fromNotifier<T>({
+  ValueNavigator.fromNotifier({
     Key? key,
     required ValueNotifier<T> valueNotifier,
     int Function(T value)? getDepth,
-    List<ValueHistoryEntry<T>>? initialHistory,
-    required AnimatedWidgetBuilder<T> builder,
-    RouteTransitionsBuilder transitionsBuilder = defaultRouteTransitionsBuilder,
-    Duration transitionDuration = const Duration(milliseconds: 300),
-    void Function(T poppedValule, T newValue)? onPop,
-    bool maintainState = false,
-    bool opaque = true,
-  }) {
-    return ValueListenableBuilder<T>(
-      valueListenable: valueNotifier,
-      builder: (context, value, _) {
-        return ValueNavigator<T>(
-          key: key,
-          value: value,
-          depth: getDepth?.call(value),
-          initialHistory: initialHistory,
-          builder: builder,
-          routeTransitionsBuilder: transitionsBuilder,
-          transitionDuration: transitionDuration,
-          onPop: (poppedValue, newValue) {
-            valueNotifier.value = newValue;
-            onPop?.call(poppedValue, newValue);
-          },
-          maintainState: maintainState,
-          opaque: opaque,
-        );
-      },
-    );
-  }
+    this.initialHistory,
+    required this.builder,
+    this.transitionsBuilder = defaultRouteTransitionsBuilder,
+    this.transitionDuration = const Duration(milliseconds: 300),
+    this.onPop,
+    this.maintainState = false,
+    this.opaque = true,
+  })  : value = valueNotifier.value,
+        depth = getDepth?.call(valueNotifier.value),
+        _valueNotifier = valueNotifier,
+        _getDepth = getDepth,
+        super(key: key);
 
-  static Widget defaultRouteTransitionsBuilder(BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child,) {
+  static Widget defaultRouteTransitionsBuilder(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
     return FadeTransition(
       opacity: ReverseAnimation(secondaryAnimation),
       child: FadeTransition(
@@ -64,6 +51,9 @@ class ValueNavigator<T> extends StatefulWidget {
       ),
     );
   }
+
+  final ValueNotifier<T>? _valueNotifier;
+  final int Function(T newValue)? _getDepth;
 
   final T value;
 
@@ -75,7 +65,7 @@ class ValueNavigator<T> extends StatefulWidget {
   final AnimatedWidgetBuilder<T> builder;
 
   /// TODO().
-  final RouteTransitionsBuilder routeTransitionsBuilder;
+  final RouteTransitionsBuilder transitionsBuilder;
 
   /// See [TransitionRoute.transitionDuration].
   final Duration transitionDuration;
@@ -88,7 +78,8 @@ class ValueNavigator<T> extends StatefulWidget {
 
   final void Function(T poppedValue, T newValue)? onPop;
 
-  static ValueNavigatorState of<T>(BuildContext context, {
+  static ValueNavigatorState of<T>(
+    BuildContext context, {
     bool root = false,
   }) {
     ValueNavigatorState? navigator;
@@ -113,9 +104,12 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
   static final ValueNotifier<bool> _displayBackButton = ValueNotifier(false);
   static late VoidCallback _backButtonOnPressed;
 
-  late final ValueNavigatorState? parent = isRoot
+  ValueNotifier<T>? _valueNotifier;
+
+  // Must be a reference and not a getter so that we can call it from `dispose`.
+  late ValueNavigatorState? parent = isRoot
       ? null
-  // Don't use `.of()` here as that'd just return this.
+      // Don't use `.of()` here as that'd just return this.
       : context.findAncestorStateOfType<ValueNavigatorState>();
 
   late final List<ValueHistoryEntry<T>> _stack;
@@ -175,14 +169,24 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
     return !_disabled && ModalRoute.of(context)!.isCurrent;
   }
 
+  ValueHistoryEntry<T> get _latestEntry {
+    if (_valueNotifier != null) {
+      return ValueHistoryEntry(
+        widget._getDepth?.call(_valueNotifier!.value),
+        _valueNotifier!.value,
+      );
+    }
+    return ValueHistoryEntry(widget.depth, widget.value);
+  }
+
   @override
   void initState() {
+    _maybeInitNotifier();
+    final ValueHistoryEntry<T> newEntry = _latestEntry;
     if (isRoot) {
       _backButtonOnPressed = popFromTree;
     }
     parent?._registerChild(this);
-    final ValueHistoryEntry<T> entry =
-    ValueHistoryEntry(widget.depth, widget.value);
     dynamic cachedStack = PageStorage.of(context)!.readState(context);
     if (widget.key is PageStorageKey &&
         cachedStack is List<ValueHistoryEntry<T>>) {
@@ -192,11 +196,11 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
       // Ensure initial history gets cached.
       PageStorage.of(context)!.writeState(context, _stack);
     } else {
-      _stack = [entry];
+      _stack = [newEntry];
     }
     // We need to check if the current value is distinct from the last
     // cached value.
-    _addIfNew(entry);
+    _addIfNew(newEntry);
     // Ensure this is called even if `addIfNew` did not call it.
     WidgetsBinding.instance!.addPostFrameCallback((_) {
       _onTreeChanged();
@@ -206,30 +210,47 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
 
   @override
   void didUpdateWidget(covariant ValueNavigator<T> oldWidget) {
-    setState(() {
-      _addIfNew(ValueHistoryEntry(widget.depth, widget.value));
-    });
+    if (_valueNotifier != oldWidget._valueNotifier) {
+      _maybeDisposeNotifier();
+      _maybeInitNotifier();
+    }
+    _onChanged();
     super.didUpdateWidget(oldWidget);
   }
 
-  void _addIfNew(ValueHistoryEntry<T> newEntry) {
-    if (widget.value != _stack.last.value ||
-        widget.depth != _stack.last.depth) {
+  void _maybeInitNotifier() {
+    _valueNotifier = widget._valueNotifier;
+    _valueNotifier?.addListener(_onChanged);
+  }
+
+  void _maybeDisposeNotifier() {
+    _valueNotifier?.removeListener(_onChanged);
+  }
+
+  void _onChanged() {
+    final bool didAdd = _addIfNew(_latestEntry);
+    if (didAdd) setState(() {});
+  }
+
+  bool _addIfNew(ValueHistoryEntry<T> newEntry) {
+    if (newEntry.value != _stack.last.value ||
+        newEntry.depth != _stack.last.depth) {
       _pushEntry(newEntry);
+      return true;
     }
+    return false;
   }
 
   @override
   void dispose() {
+    _maybeDisposeNotifier();
     parent?._removeChild(this);
     super.dispose();
   }
 
   void _onTreeChanged() {
     ValueNavigatorState._displayBackButton.value =
-        ValueNavigator
-            .of(context, root: true)
-            .treeCanPop;
+        ValueNavigator.of(context, root: true).treeCanPop;
   }
 
   void _registerChild(ValueNavigatorState child) => _children.add(child);
@@ -248,7 +269,7 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
           key: ValueKey(stackEntry),
           value: stackEntry.value,
           builder: widget.builder,
-          transitionsBuilder: widget.routeTransitionsBuilder,
+          transitionsBuilder: widget.transitionsBuilder,
           transitionDuration: widget.transitionDuration,
           maintainState: widget.maintainState,
           opaque: widget.opaque,
@@ -276,6 +297,12 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
     }
     setState(() {
       final T poppedValue = _popEntry();
+      if (_valueNotifier != null) {
+        // Roll back the value notifier's value. This will trigger `_onChanged`,
+        // but it won't do anything because `_latestEntry` and `_stack.last`
+        // will be in sync.
+        _valueNotifier!.value = _stack.last.value;
+      }
       widget.onPop?.call(poppedValue, _stack.last.value);
     });
     return true;
@@ -289,8 +316,8 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
   bool popFromTree() {
     return navigatorTree.reversed
         .expand((navigators) => navigators)
-    // `any` short circuits when it finds a true element so this will stop
-    // calling pop if any call to pop succeeds.
+        // `any` short circuits when it finds a true element so this will stop
+        // calling pop if any call to pop succeeds.
         .any((navigator) => navigator.pop());
   }
 
@@ -298,7 +325,7 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
     ValueHistoryEntry<T> prevEntry = _stack.last;
     if (newEntry.depth != null) {
       _stack.removeWhere(
-            (entry) => entry.depth == null || entry.depth! >= newEntry.depth!,
+        (entry) => entry.depth == null || entry.depth! >= newEntry.depth!,
       );
     }
     _stack.add(newEntry);
@@ -335,11 +362,11 @@ class ValueNavigatorState<T> extends State<ValueNavigator<T>> {
 }
 
 typedef AnimatedWidgetBuilder<T> = Widget Function(
-    BuildContext context,
-    T value,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    );
+  BuildContext context,
+  T value,
+  Animation<double> animation,
+  Animation<double> secondaryAnimation,
+);
 
 class ValueNavigatorBackButton extends StatelessWidget {
   const ValueNavigatorBackButton({

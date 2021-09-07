@@ -1,16 +1,33 @@
 # value_navigator
 
-A new Flutter project.
+## Core Features
 
-## Getting Started
+Provides an intuitive and highly flexible navigation with an easy to use API. Value Navigator was created as
+substitute for the existing Navigator 1.0 and 2.0 APIs. It has three core features that set it apart from the official
+Flutter solutions:
 
-This project is a starting point for a Flutter application.
+- The navigator stack is constructed and appended to implicitly as the app's data models and widget tree change.
+- Web browser (back button undoes last change) and app (back button goes "up" in a developer-defined navigation
+hierarchy) style navigation are both supported out of the box.
+- Nesting navigators in the widget tree has first class support with the system back button always popping from the
+inner most navigator first.
 
-A few resources to get you started if this is your first Flutter project:
+## How It Works
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+Value Navigator is built on top of the Flutter Navigator 2.0 API. Value Navigators operate similar to
+`ValueListenableBuilder`: each one has a value and a builder. Whenever a new value is supplied, a new page is added to
+the internal navigator's page stack. When pop is called (by the system or programmatically), the top most page is popped
+and the builder is called with the previous value. An `onPop` callback can be used to revert any state used outside of
+the navigator.
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+When the system back button is called, `ValueNavigator` attempts to pop from the deepest navigator in the tree, working
+it's way up to the root navigator until it finds a navigator that can handle the pop.
+
+In addition to a value, `ValueNavigator`'s take an optional `depth` which represents where the user currently is in the
+app's navigation flow. When a non-null depth is specified along with a value, the navigator stack is rebuilt with all
+entries of greater depth removed. When pop is called, the navigator state will return to the last seen value with a
+lower depth. This emulates "app style" navigation where popping takes the user "up" in the navigation flow.
+For browser style navigation (pop always undoes the last change), leave depth null.
+
+As a convenience, `ValueNavigator.fromNotifier` wraps a `ValueNotifier`. It updates the navigator stack when the
+notifier changes and rolls changes back when pop is called.
