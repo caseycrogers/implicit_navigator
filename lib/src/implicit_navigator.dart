@@ -14,7 +14,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     this.transitionsBuilder = defaultRouteTransitionsBuilder,
     this.transitionDuration = const Duration(milliseconds: 300),
     this.onPop,
-    this.maintainState = false,
+    this.maintainState = true,
     this.opaque = true,
     this.popPriority,
   })  : _valueNotifier = null,
@@ -29,7 +29,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     this.transitionsBuilder = defaultRouteTransitionsBuilder,
     this.transitionDuration = const Duration(milliseconds: 300),
     this.onPop,
-    this.maintainState = false,
+    this.maintainState = true,
     this.opaque = true,
     this.popPriority,
   })  : value = valueNotifier.value,
@@ -114,8 +114,8 @@ class ImplicitNavigator<T> extends StatefulWidget {
   /// A lower number corresponds to a higher priority.
   ///
   /// Implicit navigator always attempts to pop from the inner most navigators
-  /// first, it'll only consider priority when deciding between two implicit
-  /// navigators at the same depth in the navigator tree.
+  /// first, it'll only consider pop priority when deciding between two implicit
+  /// navigators at the same depth in the [navigatorTree].
   final int? popPriority;
 
   /// Get the nearest ancestor [ImplicitNavigatorState] in the widget tree.
