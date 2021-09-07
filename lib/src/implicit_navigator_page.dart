@@ -16,11 +16,11 @@ class ImplicitNavigatorPage<T> extends Page<T> {
     Object? arguments,
     String? restorationId,
   }) : super(
-    key: key,
-    name: name,
-    arguments: arguments,
-    restorationId: restorationId,
-  );
+          key: key,
+          name: name,
+          arguments: arguments,
+          restorationId: restorationId,
+        );
 
   final T value;
   final AnimatedValueWidgetBuilder<T> builder;
@@ -48,10 +48,10 @@ class _ImplicitNavigatorRoute<T> extends ModalRoute<T> {
 
   @override
   Widget buildPage(
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      ) {
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
     // We intentionally pass the parent bucket through here so that separate
     // implicit navigator pages can share page storage state.
     return PageStorage(
@@ -62,11 +62,11 @@ class _ImplicitNavigatorRoute<T> extends ModalRoute<T> {
 
   @override
   Widget buildTransitions(
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child,
-      ) {
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
     return (_page.transitionsBuilder ?? super.buildTransitions)(
       context,
       animation,

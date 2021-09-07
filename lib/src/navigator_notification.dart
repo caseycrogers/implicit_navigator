@@ -23,11 +23,11 @@ class PopNotification<T> extends ImplicitNavigatorNotification<T> {
     required T previousValue,
     required int? previousDepth,
   }) : super(
-    currentValue: currentValue,
-    currentDepth: currentDepth,
-    previousValue: previousValue,
-    previousDepth: previousDepth,
-  );
+          currentValue: currentValue,
+          currentDepth: currentDepth,
+          previousValue: previousValue,
+          previousDepth: previousDepth,
+        );
 }
 
 class PushNotification<T> extends ImplicitNavigatorNotification<T> {
@@ -37,9 +37,9 @@ class PushNotification<T> extends ImplicitNavigatorNotification<T> {
     required T previousValue,
     required int? previousDepth,
   }) : super(
-    currentValue: currentValue,
-    currentDepth: currentDepth,
-    previousValue: previousValue,
-    previousDepth: previousDepth,
-  );
+          currentValue: currentValue,
+          currentDepth: currentDepth,
+          previousValue: previousValue,
+          previousDepth: previousDepth,
+        );
 }

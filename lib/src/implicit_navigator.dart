@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'implicit_navigator_page.dart';
 import 'navigator_notification.dart';
 
-
 /// Pushes and pops pages from an internal navigator in response to changing app
 /// state.
 ///
