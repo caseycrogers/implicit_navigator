@@ -61,7 +61,8 @@ class _MyHomePageState extends State<MyHomePage> {
     super.didChangeDependencies();
   }
 
-  // Manually construct the initial value.
+  // This string is displayed as the app bar title.
+  // We manually construct the initial value.
   late String _navigatorStackString =
       '$_tabIndex > ${AnimalWidget.animals[_currAnimalIndex.value]}';
 
@@ -110,8 +111,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 // storage.
                 // This means that the animal navigator will retain its history
                 // when you navigate to another tab and then navigate back.
-                // If each new instance should have new history, use a value key
-                // or null here instead.
+                // If you want each new instance to have a new history stack,
+                // use a value key or null here instead.
                 key: PageStorageKey('animal_navigator'),
                 valueNotifier: _currAnimalIndex,
                 builder: (context, animalIndex, animation, secondaryAnimation) {
@@ -168,17 +169,17 @@ class _MyHomePageState extends State<MyHomePage> {
     return _rootNavigator.navigatorTree
         .map((navigators) => navigators.single)
         .expand((navigator) {
-      return navigator.history.map((value) {
+      return navigator.history.map((entry) {
         if ((navigator.widget.key as ValueKey).value == 'animal_navigator') {
           return AnimalWidget
-              .animals[(value as int) % AnimalWidget.animals.length];
+              .animals[(entry.value as int) % AnimalWidget.animals.length];
         }
         if ((navigator.widget.key as ValueKey).value == 'color_navigator') {
           return ColorWidget.colors
-              .firstWhere((entry) => entry.value == value)
+              .firstWhere((colorEntry) => colorEntry.value == entry.value)
               .key;
         }
-        return value;
+        return entry.value;
       });
     }).join(' > ');
   }

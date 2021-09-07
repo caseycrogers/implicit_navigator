@@ -23,7 +23,7 @@ class ValueNavigatorPage<T> extends Page<T> {
   );
 
   final T value;
-  final AnimatedWidgetBuilder<T> builder;
+  final AnimatedValueWidgetBuilder<T> builder;
   final RouteTransitionsBuilder? transitionsBuilder;
 
   final Duration transitionDuration;

@@ -1,9 +1,12 @@
 # value_navigator
 
-## Core Features
 
 Provides an intuitive and highly flexible navigation with an easy to use API. Value Navigator was created as
-substitute for the existing Navigator 1.0 and 2.0 APIs. It has three core features that set it apart from the official
+substitute for the existing Navigator 1.0 and 2.0 APIs.
+
+## Core Features
+
+Value Navigator has three core features that set it apart from the official
 Flutter solutions:
 
 - The navigator stack is constructed and appended to implicitly as the app's data models and widget tree change.
@@ -23,10 +26,11 @@ the navigator.
 When the system back button is called, `ValueNavigator` attempts to pop from the deepest navigator in the tree, working
 it's way up to the root navigator until it finds a navigator that can handle the pop.
 
-In addition to a value, `ValueNavigator`'s take an optional `depth` which represents where the user currently is in the
-app's navigation flow. When a non-null depth is specified along with a value, the navigator stack is rebuilt with all
-entries of greater depth removed. When pop is called, the navigator state will return to the last seen value with a
-lower depth. This emulates "app style" navigation where popping takes the user "up" in the navigation flow.
+`ValueNavigator` takes an optional `depth` parameter which represents where the user currently is in the
+app's navigation flow. When a non-null depth is specified, the navigator stack is rebuilt with all
+entries of greater depth removed. eg a value of depth 2 will replace any existing stack entries of depth 2 or greater.
+When pop is called, the navigator state will return to the last seen value with a lower depth. This emulates "app style"
+navigation where popping takes the user "up" in the navigation flow.
 For browser style navigation (pop always undoes the last change), leave depth null.
 
 As a convenience, `ValueNavigator.fromNotifier` wraps a `ValueNotifier`. It updates the navigator stack when the
