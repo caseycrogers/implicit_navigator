@@ -1,15 +1,15 @@
 # implicit_navigator
 
-Intuitive and highly flexible navigation with an easy to use API.
+An intuitive and highly flexible navigation system with an easy to use API.
 
-The navigator page stack is updated implicitly in response to data model changes and the system back button, just build
-your widget tree and Implicit Navigator will handle the rest!
+The page stack is updated implicitly in response to data model changes and the system back button, just build your
+widget tree and Implicit Navigator will handle the rest!
 
 ## Core Features
 
-Implicit Navigator has three core features that set it apart from the official Flutter solution(s):
+The following features set Implicit Navigator apart from the official Flutter solution(s):
 
-1. The navigator stack is constructed and appended to implicitly as the app's data models and widget tree change.
+1. The navigator stack is constructed and appended to implicitly as your app's data models and widget tree change.
 2. "App-style" and "browser-style" navigation are both supported out of the box:
    * **App-Style** - back button goes "up" in a developer-defined navigation hierarchy, potentially undoing multiple
 state changes
@@ -21,8 +21,8 @@ inner most navigator first.
 
 Implicit Navigator is built on top of the Flutter Navigator 2.0 API. Implicit Navigators operate similar to
 `ValueListenableBuilder`: each one takes in a changing value and a builder. Whenever a new value is supplied, a new page
-is added to the internal navigator's page stack. When pop is called (by the system or programmatically), the top most
-page is popped and the builder is called with the previous value. An `onPop` callback can be used to revert any state
+is added to the internal navigator's page stack. When pop is called (by the system or programmatically), the topmost
+page is popped and the builder is called with the new topmost value. An `onPop` callback can be used to revert any state
 used outside of the navigator.
 
 As a convenience method, `ImplicitNavigator.fromNotifier` wraps a `ValueNotifier`. It pushes to the navigator stack when

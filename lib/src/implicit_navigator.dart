@@ -5,6 +5,31 @@ import 'package:flutter/material.dart';
 import 'implicit_navigator_page.dart';
 import 'navigator_notification.dart';
 
+
+/// Pushes and pops pages from an internal navigator in response to changing app
+/// state.
+///
+/// When [value] and/or [depth] change, a new page is pushed onto the navigator
+/// stack and [builder] is called with the latest [value]. When [popFromTree] is
+/// called or the system back button is pressed, [ImplicitNavigator] attempts to
+/// pop from any navigator in the tree, starting with deepest nested navigator
+/// first and breaking ties between equally deep navigators with [popPriority].
+///
+/// Implicit Navigator can be used to produce two distinct navigation patterns:
+///  - App-Style: the back button/pop goes "up" a developer defined navigation
+///    hierarchy, potentially undoing multiple state changes at once.
+///    App-style is typical for most modern smartphone apps.
+///  - Browser-Style: the back button/pop reverts the last state change.
+///    Browser-style is how most web pages behave.
+///
+/// For app-style navigation, specify non-null values for [depth] to set your
+/// app's navigation hierarchy. Additionally, provide a `PageStorageKey` to any
+/// [ImplicitNavigator] nested inside of another [ImplicitNavigator].
+/// This ensures that the history of the inner navigator is maintained when the
+/// user navigates away form it and then back to it.
+///
+/// For browser-style navigation, simply leave [depth] null and do not provide
+/// a `PageStorageKey` to any nested [ImplicitNavigator]'s.
 class ImplicitNavigator<T> extends StatefulWidget {
   const ImplicitNavigator({
     this.key,
@@ -21,6 +46,9 @@ class ImplicitNavigator<T> extends StatefulWidget {
   })  : _valueNotifier = null,
         _getDepth = null;
 
+  /// Creates an [ImplicitNavigator] that pushes new pages when the
+  /// [valueNotifier] changes and reverts [valueNotifier.value] when pages are
+  /// popped.
   ImplicitNavigator.fromNotifier({
     this.key,
     required ValueNotifier<T> valueNotifier,
@@ -263,7 +291,8 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
 
   /// Attempt to pop from this navigator.
   ///
-  /// Returns true if the pop was successful.
+  /// Returns true if the pop was successful. Usually this function should not
+  /// be called directly and [popFromTree] should be used instead.
   bool pop() {
     if (_stack.length == 1 || !isActive) {
       return false;
