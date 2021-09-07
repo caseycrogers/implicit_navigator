@@ -12,7 +12,7 @@ Implicit Navigator has three core features that set it apart from the official F
 1. The navigator stack is constructed and appended to implicitly as the app's data models and widget tree change.
 2. "App-style" and "browser-style" navigation are both supported out of the box:
    * **App-Style** - back button goes "up" in a developer-defined navigation hierarchy, potentially undoing multiple
-state changes.
+state changes
    * **Browser-Style** - back button reverts the last state change
 3. Nesting navigators in the widget tree has first class support with the system back button always popping from the
 inner most navigator first.

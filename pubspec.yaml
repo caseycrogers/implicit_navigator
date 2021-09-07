@@ -1,5 +1,6 @@
 name: implicit_navigator
 description: Intuitive and highly flexible navigation with an easy to use API.
+repository: https://github.com/caseycrogers/ImplicitNavigator
 
 version: 0.0.1
 
