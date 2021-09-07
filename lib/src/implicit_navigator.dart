@@ -16,6 +16,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     this.onPop,
     this.maintainState = false,
     this.opaque = true,
+    this.popPriority,
   })  : _valueNotifier = null,
         _getDepth = null;
 
@@ -30,6 +31,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     this.onPop,
     this.maintainState = false,
     this.opaque = true,
+    this.popPriority,
   })  : value = valueNotifier.value,
         depth = getDepth?.call(valueNotifier.value),
         _valueNotifier = valueNotifier,
@@ -105,6 +107,16 @@ class ImplicitNavigator<T> extends StatefulWidget {
 
   /// A callback that runs immediately after a page is popped.
   final void Function(T poppedValue, T newValue)? onPop;
+
+  /// The priority of this widget when choosing which implicit navigator to pop
+  /// from.
+  ///
+  /// A lower number corresponds to a higher priority.
+  ///
+  /// Implicit navigator always attempts to pop from the inner most navigators
+  /// first, it'll only consider priority when deciding between two implicit
+  /// navigators at the same depth in the navigator tree.
+  final int? popPriority;
 
   /// Get the nearest ancestor [ImplicitNavigatorState] in the widget tree.
   static ImplicitNavigatorState of<T>(
@@ -223,6 +235,21 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     return !_disabled &&
         ModalRoute.of(context)!.isCurrent &&
         (isRoot || parent!.isActive);
+  }
+
+  /// Attempt to pop from any implicit navigators in this navigator's
+  /// [navigatorTree].
+  ///
+  /// Navigators are tested in reverse level order-the most nested navigators
+  /// attempt to pop first. Returns true if popping is successful.
+  /// If two or more navigators are at the same level, they are tested in order
+  /// of their [popPriority]: least to greatest followed by null.
+  bool popFromTree() {
+    return navigatorTree.reversed
+        .expand(_prioritySorted)
+        // `any` short circuits when it finds a true element so this will stop
+        // calling pop if any call to pop succeeds.
+        .any((navigator) => navigator.pop());
   }
 
   /// Attempt to pop from this navigator.
@@ -347,19 +374,6 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     return internalNavigator;
   }
 
-  /// Attempt to pop from any implicit navigators in this navigator's
-  /// [navigatorTree].
-  ///
-  /// Navigators are tested in reverse level order-the most nested navigators
-  /// attempt to pop first. Returns true if popping is successful.
-  bool popFromTree() {
-    return navigatorTree.reversed
-        .expand((navigators) => navigators)
-        // `any` short circuits when it finds a true element so this will stop
-        // calling pop if any call to pop succeeds.
-        .any((navigator) => navigator.pop());
-  }
-
   ValueHistoryEntry<T> get _latestEntry {
     if (_valueNotifier != null) {
       return ValueHistoryEntry(
@@ -416,6 +430,21 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   void _updateDisplayBackButton() {
     ImplicitNavigatorState._displayBackButton.value =
         ImplicitNavigator.of(context, root: true).treeCanPop;
+  }
+
+  List<ImplicitNavigatorState> _prioritySorted(
+    List<ImplicitNavigatorState> navigators,
+  ) {
+    return List.from(navigators)
+      ..sort((ImplicitNavigatorState a, ImplicitNavigatorState b) {
+        if (a.widget.popPriority == null) {
+          return 1;
+        }
+        if (b.widget.popPriority == null) {
+          return -1;
+        }
+        return a.widget.popPriority!.compareTo(b.widget.popPriority!);
+      });
   }
 }
 
