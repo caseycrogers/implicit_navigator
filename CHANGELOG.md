@@ -9,3 +9,7 @@
 ## [0.0.3] - 09/07/2021
 
 * Readme and documentation changes.
+
+## [0.0.4] - 09/07/2021
+
+* Added example code to documentation.

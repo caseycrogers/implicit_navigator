@@ -29,6 +29,26 @@ import 'navigator_notification.dart';
 ///
 /// For browser-style navigation, simply leave [depth] null and do not provide
 /// a `PageStorageKey` to any nested [ImplicitNavigator]'s.
+///
+/// The following code implements a trivial browser-style [ImplicitNavigator]:
+/// ```dart
+/// int index = 0;
+///
+/// @override
+/// Widget build(BuildContext context) {
+///   return ImplicitNavigator<int>(
+///     value: index,
+///     builder: (context, index, animation, secondaryAnimation) {
+///       return Text(index.toString());
+///     },
+///     onPop: (poppedIndex, newIndex) {
+///       setState(() {
+///         index = newIndex;
+///       });
+///     },
+///   );
+/// }
+/// ```
 class ImplicitNavigator<T> extends StatefulWidget {
   const ImplicitNavigator({
     this.key,
@@ -80,6 +100,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     );
   }
 
+  /// State specific to [ImplicitNavigator.fromNotifier].
   final ValueNotifier<T>? _valueNotifier;
   final int Function(T newValue)? _getDepth;
 
@@ -178,6 +199,13 @@ class ImplicitNavigator<T> extends StatefulWidget {
   }
 }
 
+/// The state object of an [ImplicitNavigatorState].
+///
+/// You can access this object by calling [ImplicitNavigator.of] from a
+/// build context below the navigator you want to access.
+///
+/// The state object allows you to read and manipulate [ImplicitNavigator]'s
+/// internal stack using [navigatorTree]/[history] and [popFromTree].
 class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   // This state is used by `ImplicitNavigatorBackButton` to tell if the back
   // button should be displayed.
@@ -502,6 +530,39 @@ typedef AnimatedValueWidgetBuilder<T> = Widget Function(
   Animation<double> secondaryAnimation,
 );
 
+/// A back button that is only visible when an [ImplicitNavigator] has pages it
+/// can pop.
+///
+/// Intended for use with [AppBar] to replace the default back button which is
+/// only visible if the top most navigator can pop:
+///
+/// ```dart
+/// int index = 0;
+///
+/// @override
+/// Widget build(BuildContext context) {
+///   return Scaffold(
+///     appBar: AppBar(
+///       leading: const ImplicitNavigatorBackButton(),
+///     ),
+///     body: ImplicitNavigator<int>(
+///       value: index,
+///       builder: (context, index, animation, secondaryAnimation) {
+///         return Text(index.toString());
+///       },
+///     ),
+///     floatingActionButton: FloatingActionButton(
+///       child: const Icon(Icons.add),
+///       onPressed: () {
+///         setState(() {
+///           index += 1;
+///         });
+///       },
+///     ),
+///   );
+/// }
+///
+/// ```
 class ImplicitNavigatorBackButton extends StatelessWidget {
   const ImplicitNavigatorBackButton({
     this.transitionDuration = const Duration(milliseconds: 100),
@@ -541,6 +602,10 @@ class ImplicitNavigatorBackButton extends StatelessWidget {
   }
 }
 
+/// An entry that stores [ImplicitNavigator.depth] and
+/// [ImplicitNavigator.value].
+///
+/// History entries are used to restore [value] when a page is popped.
 @immutable
 class ValueHistoryEntry<T> {
   const ValueHistoryEntry(this.depth, this.value);
