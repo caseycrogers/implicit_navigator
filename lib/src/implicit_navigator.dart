@@ -1,8 +1,9 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'navigator_notification.dart';
 import 'implicit_navigator_page.dart';
+import 'navigator_notification.dart';
 
 class ImplicitNavigator<T> extends StatefulWidget {
   const ImplicitNavigator({
@@ -59,6 +60,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
   ///
   /// If key is a [PageStorageKey], this widget will use page storage to
   /// save and (on reinitialization) restore it's history stack.
+  @override
   final Key? key;
 
   /// The current value to build the navigator with.
@@ -73,8 +75,8 @@ class ImplicitNavigator<T> extends StatefulWidget {
   ///
   /// When pushing a new value to the history stack, the new value will be
   /// pushed as a replacement to all entries of equal or greater depth.
-  /// If [ImplicitNavigator] is rebuilt with a new [depth] and unchanged [value], a
-  /// page will still be pushed to the stack.
+  /// If [ImplicitNavigator] is rebuilt with a new [depth] and unchanged
+  /// [value], a page will still be pushed to the stack.
   ///
   /// Values with a depth of null are always appended to the end of the stack,
   /// including after any other values of null depth.
@@ -119,13 +121,14 @@ class ImplicitNavigator<T> extends StatefulWidget {
   final int? popPriority;
 
   /// Get the nearest ancestor [ImplicitNavigatorState] in the widget tree.
-  static ImplicitNavigatorState of<T>(
+  static ImplicitNavigatorState<T> of<T>(
     BuildContext context, {
     bool root = false,
   }) {
-    ImplicitNavigatorState? navigator;
-    if (context is StatefulElement && context.state is ImplicitNavigatorState) {
-      navigator = context.state as ImplicitNavigatorState;
+    ImplicitNavigatorState<T>? navigator;
+    if (context is StatefulElement &&
+        context.state is ImplicitNavigatorState<T>) {
+      navigator = context.state as ImplicitNavigatorState<T>;
     }
     if (root) {
       navigator =
@@ -140,11 +143,17 @@ class ImplicitNavigator<T> extends StatefulWidget {
 
   @override
   ImplicitNavigatorState createState() => ImplicitNavigatorState<T>();
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(DiagnosticsProperty<Key?>('key', key));
+  }
 }
 
 class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
-  // This state is used by `ImplicitNavigatorBackButton` to tell if the back button
-  // should be displayed.
+  // This state is used by `ImplicitNavigatorBackButton` to tell if the back
+  // button should be displayed.
   // It is static so that it can be accessed from any location in the widget
   // tree.
   static final ValueNotifier<bool> _displayBackButton = ValueNotifier(false);
@@ -153,7 +162,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   ValueNotifier<T>? _valueNotifier;
 
   // Must be a reference and not a getter so that we can call it from `dispose`.
-  late ImplicitNavigatorState? _parent = isRoot
+  late final ImplicitNavigatorState? _parent = isRoot
       ? null
       // Don't use `.of()` here as that'd just return `this`.
       : context.findAncestorStateOfType<ImplicitNavigatorState>();
@@ -164,8 +173,8 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   /// The history of values and depths for this implicit navigator.
   List<ValueHistoryEntry<T>> get history => List.from(_stack);
 
-  /// Whether or not this implciit navigator has seen any previous values that it
-  /// can pop to.
+  /// Whether or not this implciit navigator has seen any previous values that
+  /// it can pop to.
   bool get canPop {
     return _stack.length > 1;
   }
@@ -207,13 +216,13 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
 
   bool _disabled = false;
 
-  /// Set this implicit navigator and all those below it to ignore attempts to pop
-  /// (including from the system back button).
+  /// Set this implicit navigator and all those below it to ignore attempts to
+  /// pop (including from the system back button).
   ///
-  /// Disable a implicit navigator if you wish to take it off stage and as such do
-  /// not want it intercepting calls to pop. eg if you have a implcit navigator
-  /// inside of a [PageView], you would not want it popping while it is not on
-  /// screen.
+  /// Disable a implicit navigator if you wish to take it off stage and as such
+  /// do not want it intercepting calls to pop. eg if you have an implicit
+  /// navigator inside of a [PageView], you would not want it popping while it
+  /// is not on screen.
   void disablePop() {
     if (!_disabled) {
       _disabled = true;
@@ -229,11 +238,11 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     }
   }
 
-  /// Whether or not this implicit navigator is enabled AND is currently at the top
-  /// of all parent implicit navigator's history stacks.
+  /// Whether or not this implicit navigator is enabled AND is currently at the
+  /// top of all parent implicit navigator's history stacks.
   bool get isActive {
     return !_disabled &&
-        ModalRoute.of(context)!.isCurrent &&
+        (ModalRoute.of(context)?.isCurrent ?? true) &&
         (isRoot || parent!.isActive);
   }
 
@@ -280,7 +289,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
       _backButtonOnPressed = popFromTree;
     }
     _parent?._registerChild(this);
-    dynamic cachedStack = PageStorage.of(context)!.readState(context);
+    final dynamic cachedStack = PageStorage.of(context)!.readState(context);
     if (widget.key is PageStorageKey &&
         cachedStack is List<ValueHistoryEntry<T>>) {
       _stack = cachedStack;
@@ -322,7 +331,9 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
 
   void _onChanged() {
     final bool didAdd = _addIfNew(_latestEntry);
-    if (didAdd) setState(() {});
+    if (didAdd) {
+      setState(() {});
+    }
   }
 
   bool _addIfNew(ValueHistoryEntry<T> newEntry) {
@@ -344,7 +355,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   @override
   Widget build(BuildContext context) {
     final PageStorageBucket parentBucket = PageStorage.of(context)!;
-    Widget internalNavigator = Navigator(
+    final Widget internalNavigator = Navigator(
       pages: _stack.map((stackEntry) {
         return ImplicitNavigatorPage<T>(
           // Bypass the page route's internal bucket so that we share state
@@ -359,7 +370,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
           opaque: widget.opaque,
         );
       }).toList(),
-      onPopPage: (route, result) {
+      onPopPage: (route, dynamic result) {
         return pop();
       },
     );
@@ -389,7 +400,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   void _removeChild(ImplicitNavigatorState child) => _children.remove(child);
 
   void _pushEntry(ValueHistoryEntry<T> newEntry) {
-    ValueHistoryEntry<T> prevEntry = _stack.last;
+    final ValueHistoryEntry<T> prevEntry = _stack.last;
     if (newEntry.depth != null) {
       _stack.removeWhere(
         (entry) => entry.depth == null || entry.depth! >= newEntry.depth!,
@@ -429,7 +440,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
 
   void _updateDisplayBackButton() {
     ImplicitNavigatorState._displayBackButton.value =
-        ImplicitNavigator.of(context, root: true).treeCanPop;
+        ImplicitNavigator.of<dynamic>(context, root: true).treeCanPop;
   }
 
   List<ImplicitNavigatorState> _prioritySorted(
@@ -504,7 +515,7 @@ class ImplicitNavigatorBackButton extends StatelessWidget {
 
 @immutable
 class ValueHistoryEntry<T> {
-  ValueHistoryEntry(this.depth, this.value);
+  const ValueHistoryEntry(this.depth, this.value);
 
   final int? depth;
   final T value;

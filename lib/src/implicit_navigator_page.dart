@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'implicit_navigator.dart';
 
 class ImplicitNavigatorPage<T> extends Page<T> {
-  ImplicitNavigatorPage({
+  const ImplicitNavigatorPage({
     required this.bucket,
     required this.value,
     required this.builder,
@@ -41,7 +41,7 @@ class ImplicitNavigatorPage<T> extends Page<T> {
 class _ImplicitNavigatorRoute<T> extends ModalRoute<T> {
   _ImplicitNavigatorRoute(this._page);
 
-  ImplicitNavigatorPage<T> _page;
+  final ImplicitNavigatorPage<T> _page;
 
   @override
   RouteSettings get settings => _page;

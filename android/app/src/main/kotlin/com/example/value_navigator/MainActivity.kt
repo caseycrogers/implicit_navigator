@@ -1,4 +1,4 @@
-package com.example.value_navigator
+package com.example.implicit_navigator
 
 import io.flutter.embedding.android.FlutterActivity
 

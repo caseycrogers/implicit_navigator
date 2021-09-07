@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.value_navigator">
+    package="com.example.implicit_navigator">
    <application
-        android:label="value_navigator"
+        android:label="implicit_navigator"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

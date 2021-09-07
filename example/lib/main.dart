@@ -1,7 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:value_navigator/implicit_navigator.dart';
+
+import 'package:implicit_navigator/implicit_navigator.dart';
 
 void main() {
   runApp(MyApp());
@@ -64,7 +65,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final ValueNotifier<Color?> _currColor = ValueNotifier(null);
 
   bool _isInitialized = false;
-  late TabController _tabController = DefaultTabController.of(context)!;
+  late final TabController _tabController = DefaultTabController.of(context)!;
 
   void _increment() {
     if (_tabIndex == 0) {
@@ -114,11 +115,11 @@ class _MyHomePageState extends State<MyHomePage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          leading: ImplicitNavigatorBackButton(),
+          leading: const ImplicitNavigatorBackButton(),
           title: Text(
             _appStyleNavigation ? _appStackString : _browserStackString,
           ),
-          bottom: TabBar(
+          bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.pets)),
               Tab(icon: Icon(Icons.color_lens)),
@@ -132,8 +133,8 @@ class _MyHomePageState extends State<MyHomePage> {
             Expanded(
               child: ImplicitNavigator<int>(
                 key: _appStyleNavigation
-                    ? PageStorageKey('tab_navigator')
-                    : ValueKey('tab_navigator'),
+                    ? const PageStorageKey('tab_navigator')
+                    : const ValueKey('tab_navigator'),
                 value: _tabIndex,
                 // Always set depth to null for browser style navigation.
                 depth: _appStyleNavigation ? _tabIndexDepth(_tabIndex) : null,
@@ -141,9 +142,11 @@ class _MyHomePageState extends State<MyHomePage> {
                   _tabIndex = newIndex;
                 },
                 builder: (context, value, animation, secondaryAnimation) {
-                  // We can only get the root navigator from an interior context. Get
-                  // a reference here so that the notification listener can access it.
-                  _rootNavigator = ImplicitNavigator.of(context, root: true);
+                  // We can only get the root navigator from an interior
+                  // context. Get a reference here so that the notification
+                  // listener can access it.
+                  _rootNavigator =
+                      ImplicitNavigator.of<dynamic>(context, root: true);
                   if (value == 0) {
                     return ImplicitNavigator<int?>.fromNotifier(
                       // If you pass in a PageStorageKey, implicit navigator
@@ -154,16 +157,16 @@ class _MyHomePageState extends State<MyHomePage> {
                       // navigate back. This is usually desired for app style
                       // navigation.
                       key: _appStyleNavigation
-                          ? PageStorageKey('animal_navigator')
-                          : ValueKey('animal_navigator'),
+                          ? const PageStorageKey('animal_navigator')
+                          : const ValueKey('animal_navigator'),
                       valueNotifier: _currAnimalIndex,
                       getDepth: _appStyleNavigation ? _animalIndexDepth : null,
                       builder: (context, animalIndex, animation,
                           secondaryAnimation) {
                         if (animalIndex == null) {
-                          return Text(
+                          return const Text(
                             'Press the floating action button to select an'
-                            'animal!',
+                            ' animal!',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 36),
                           );
@@ -179,8 +182,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   if (value == 1) {
                     return ImplicitNavigator<Color?>.fromNotifier(
                         key: _appStyleNavigation
-                            ? PageStorageKey('color_navigator')
-                            : ValueKey('color_navigator'),
+                            ? const PageStorageKey('color_navigator')
+                            : const ValueKey('color_navigator'),
                         valueNotifier: _currColor,
                         getDepth: _appStyleNavigation ? _colorDepth : null,
                         builder: (
@@ -190,7 +193,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           secondaryAnimation,
                         ) {
                           if (color == null) {
-                            return Text(
+                            return const Text(
                               'Press the floating action button to select a '
                               'color!',
                               textAlign: TextAlign.center,
@@ -205,7 +208,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               opacity: animation, child: child);
                         });
                   }
-                  return Center(
+                  return const Center(
                     child: Text(
                       'This is a demo of `ImplicitNavigator`!',
                       style: TextStyle(fontSize: 24),
@@ -220,7 +223,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ? FloatingActionButton(
                 onPressed: _increment,
                 tooltip: 'Increment',
-                child: Icon(Icons.navigate_next),
+                child: const Icon(Icons.navigate_next),
               )
             : null,
       ),
@@ -236,7 +239,9 @@ class _MyHomePageState extends State<MyHomePage> {
         .map((navigators) => navigators.single)
         .expand((navigator) {
       return navigator.history.map((entry) {
-        if (entry.value == null) return 'null';
+        if (entry.value == null) {
+          return 'null';
+        }
         if ((navigator.widget.key as ValueKey).value == 'animal_navigator') {
           // Display the text for the current animal.
           return AnimalWidget
@@ -287,26 +292,38 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget get _navigationStyleSelector {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       color: Theme.of(context).accentColor.withAlpha(150),
-      child: Row(
-        children: [
-          Text(
-            'Navigation Style: ',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          Text('App', style: TextStyle(fontSize: 18)),
-          Switch(
+      child: InkWell(
+        onTap: _onStyleToggled,
+        child: Row(
+          children: [
+            const Text(
+              'Navigation Style: ',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const Text('App', style: TextStyle(fontSize: 18)),
+            Switch(
               value: !_appStyleNavigation,
               onChanged: (_) {
-                // Change the style and rebuild the widget tree.
-                _appStyleNavigation = !_appStyleNavigation;
-                widget.rebuildParent();
-              }),
-          Text('Browser', style: TextStyle(fontSize: 18)),
-        ],
+                _onStyleToggled();
+              },
+              activeColor: Colors.white30,
+              activeTrackColor: Colors.black38,
+              inactiveThumbColor: Colors.white30,
+              inactiveTrackColor: Colors.black38,
+            ),
+            const Text('Browser', style: TextStyle(fontSize: 18)),
+          ],
+        ),
       ),
     );
+  }
+
+  void _onStyleToggled() {
+    // Change the style and rebuild the widget tree.
+    _appStyleNavigation = !_appStyleNavigation;
+    widget.rebuildParent();
   }
 }
 
@@ -346,19 +363,19 @@ class AnimalWidget extends StatelessWidget {
           child: Center(
             child: Text(
               color,
-              style: TextStyle(fontSize: 36),
+              style: const TextStyle(fontSize: 36),
             ),
           ),
         ),
         SlideInOut(
-          incoming: Offset(-1, 0),
-          outgoing: Offset(1, 0),
+          incoming: const Offset(-1, 0),
+          outgoing: const Offset(1, 0),
           animation: animation,
           secondaryAnimation: secondaryAnimation,
           child: Center(
             child: Text(
               animal,
-              style: TextStyle(fontSize: 36),
+              style: const TextStyle(fontSize: 36),
             ),
           ),
         ),

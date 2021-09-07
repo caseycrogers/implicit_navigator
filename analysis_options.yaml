@@ -23,7 +23,7 @@ linter:
     - always_require_non_null_named_parameters
     # - always_specify_types # This is obnoxiously verbose, don't bother.
     - annotate_overrides
-    # - avoid_annotating_with_dynamic # conflicts with always_specify_types
+    # - avoid_annotating_with_dynamic
     # - avoid_as
     - avoid_bool_literals_in_conditional_expressions
     # - avoid_catches_without_on_clauses
@@ -87,7 +87,7 @@ linter:
     # - omit_local_variable_types # opposite of always_specify_types
     # - one_member_abstracts # too many false positives
     # - only_throw_errors # https://github.com/flutter/flutter/issues/5792
-    - overridden_fields
+    # - overridden_fields # we want to override `Widget.key` in `ImplicitNavigator` to make the source code more readable
     - package_api_docs
     - package_names
     - package_prefixed_library_names

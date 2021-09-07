@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 @immutable
 abstract class ImplicitNavigatorNotification<T> extends Notification {
-  ImplicitNavigatorNotification({
+  const ImplicitNavigatorNotification({
     required this.currentValue,
     required this.currentDepth,
     required this.previousValue,
@@ -17,7 +17,7 @@ abstract class ImplicitNavigatorNotification<T> extends Notification {
 }
 
 class PopNotification<T> extends ImplicitNavigatorNotification<T> {
-  PopNotification({
+  const PopNotification({
     required T currentValue,
     required int? currentDepth,
     required T previousValue,
@@ -31,7 +31,7 @@ class PopNotification<T> extends ImplicitNavigatorNotification<T> {
 }
 
 class PushNotification<T> extends ImplicitNavigatorNotification<T> {
-  PushNotification({
+  const PushNotification({
     required T currentValue,
     required int? currentDepth,
     required T previousValue,
