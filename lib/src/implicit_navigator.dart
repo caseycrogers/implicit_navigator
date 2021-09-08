@@ -228,7 +228,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   /// The history of values and depths for this implicit navigator.
   List<ValueHistoryEntry<T>> get history => List.from(_stack);
 
-  /// Whether or not this implciit navigator has seen any previous values that
+  /// Whether or not this implicit navigator has seen any previous values that
   /// it can pop to.
   bool get canPop {
     return _stack.length > 1;
@@ -561,7 +561,6 @@ typedef AnimatedValueWidgetBuilder<T> = Widget Function(
 ///     ),
 ///   );
 /// }
-///
 /// ```
 class ImplicitNavigatorBackButton extends StatelessWidget {
   const ImplicitNavigatorBackButton({

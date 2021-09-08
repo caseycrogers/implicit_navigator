@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+/// A notification that is dispatched whenever a [ImplicitNavigator]'s stack
+/// changes.
 @immutable
 abstract class ImplicitNavigatorNotification<T> extends Notification {
   const ImplicitNavigatorNotification({
@@ -16,6 +18,8 @@ abstract class ImplicitNavigatorNotification<T> extends Notification {
   final int? previousDepth;
 }
 
+/// A notification that is dispatched whenever an [ImplicitNavigator]'s
+/// finishing popping from it's internal navigation stack.
 class PopNotification<T> extends ImplicitNavigatorNotification<T> {
   const PopNotification({
     required T currentValue,
@@ -30,6 +34,8 @@ class PopNotification<T> extends ImplicitNavigatorNotification<T> {
         );
 }
 
+/// A notification that is dispatched whenever an [ImplicitNavigator]'s
+/// pushes a new value to it's internal navigation stack.
 class PushNotification<T> extends ImplicitNavigatorNotification<T> {
   const PushNotification({
     required T currentValue,
