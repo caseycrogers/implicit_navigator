@@ -38,7 +38,7 @@ class ImplicitNavigatorPage<T> extends Page<T> {
   }
 }
 
-class _ImplicitNavigatorRoute<T> extends ModalRoute<T> {
+class _ImplicitNavigatorRoute<T> extends PageRoute<T> {
   _ImplicitNavigatorRoute(this._page);
 
   final ImplicitNavigatorPage<T> _page;

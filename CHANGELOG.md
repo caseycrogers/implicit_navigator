@@ -13,3 +13,8 @@
 ## [0.0.4] - 09/07/2021
 
 * Added example code to documentation.
+
+## [0.0.5] - 09/07/2021
+
+* Replaced the overly complex example with a rendition of the book app example from the Flutter Navigation tutorial.
+* Overhauled the readme with simple example snippets.

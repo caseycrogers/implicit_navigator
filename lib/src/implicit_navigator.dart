@@ -32,22 +32,25 @@ import 'navigator_notification.dart';
 ///
 /// The following code implements a trivial browser-style [ImplicitNavigator]:
 /// ```dart
-/// int index = 0;
+///   int _index = 0;
 ///
-/// @override
-/// Widget build(BuildContext context) {
-///   return ImplicitNavigator<int>(
-///     value: index,
-///     builder: (context, index, animation, secondaryAnimation) {
-///       return Text(index.toString());
-///     },
-///     onPop: (poppedIndex, newIndex) {
-///       setState(() {
-///         index = newIndex;
-///       });
-///     },
-///   );
-/// }
+///   @override
+///   Widget build(BuildContext context) {
+///     return ImplicitNavigator<int>(
+///       value: _index,
+///       builder: (context, index, animation, secondaryAnimation) {
+///         return TextButton(
+///           onPressed: () => setState(() {
+///             _index += 1;
+///           }),
+///           child: Text(index.toString()),
+///         );
+///       },
+///       onPop: (poppedValue, currentValue) {
+///         _index = currentValue;
+///       },
+///     );
+///   }
 /// ```
 class ImplicitNavigator<T> extends StatefulWidget {
   const ImplicitNavigator({
@@ -68,6 +71,12 @@ class ImplicitNavigator<T> extends StatefulWidget {
   /// Creates an [ImplicitNavigator] that pushes new pages when the
   /// [valueNotifier] changes and reverts [valueNotifier.value] when pages are
   /// popped.
+  ///
+  /// If non-null, [getDepth] we be called on each value and used to set
+  /// [ImplicitNavigator.depth]. [getDepth] MUST return the same depth for a
+  /// given value every time it's called on that value. If it returns
+  /// inconsistent depths, [ImplicitNavigator] may push redundant pages and will
+  /// not pop pages properly.
   ImplicitNavigator.fromNotifier({
     this.key,
     required ValueNotifier<T> valueNotifier,
@@ -85,6 +94,8 @@ class ImplicitNavigator<T> extends StatefulWidget {
         _valueNotifier = valueNotifier,
         _getDepth = getDepth;
 
+  /// The default [RouteTransitionsBuilder] used by [ImplicitNavigator] to
+  /// animate content in and out.
   static Widget defaultRouteTransitionsBuilder(
     BuildContext context,
     Animation<double> animation,
@@ -98,6 +109,25 @@ class ImplicitNavigator<T> extends StatefulWidget {
         child: child,
       ),
     );
+  }
+
+  /// A [RouteTransitionsBuilder] that uses the default transitions for the
+  /// current platform.
+  ///
+  /// See [PageTransitionsTheme.buildTransitions].
+  static Widget materialRouteTransitionsBuilder(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return Theme.of(context).pageTransitionsTheme.buildTransitions<dynamic>(
+          ModalRoute.of(context) as PageRoute,
+          context,
+          animation,
+          secondaryAnimation,
+          child,
+        );
   }
 
   /// State specific to [ImplicitNavigator.fromNotifier].
@@ -150,13 +180,17 @@ class ImplicitNavigator<T> extends StatefulWidget {
   final Duration transitionDuration;
 
   /// See [ModalRoute.maintainState].
+  ///
+  /// Setting [maintainState] to false will reset an inner implicit navigator's
+  /// history stack if a user navigates away from it and then returns to it via
+  /// [pop]/[popFromTree] unless [key] is set to [PageStorageKey].
   final bool maintainState;
 
   /// See [TransitionRoute.opaque].
   final bool opaque;
 
   /// A callback that runs immediately after a page is popped.
-  final void Function(T poppedValue, T newValue)? onPop;
+  final void Function(T poppedValue, T currentValue)? onPop;
 
   /// The priority of this widget when choosing which implicit navigator to pop
   /// from.
@@ -169,22 +203,22 @@ class ImplicitNavigator<T> extends StatefulWidget {
   final int? popPriority;
 
   /// Get the nearest ancestor [ImplicitNavigatorState] in the widget tree.
-  static ImplicitNavigatorState<T> of<T>(
+  static ImplicitNavigatorState<dynamic> of(
     BuildContext context, {
     bool root = false,
   }) {
-    ImplicitNavigatorState<T>? navigator;
+    ImplicitNavigatorState<dynamic>? navigator;
     if (context is StatefulElement &&
-        context.state is ImplicitNavigatorState<T>) {
-      navigator = context.state as ImplicitNavigatorState<T>;
+        context.state is ImplicitNavigatorState<dynamic>) {
+      navigator = context.state as ImplicitNavigatorState<dynamic>;
     }
     if (root) {
-      navigator =
-          context.findRootAncestorStateOfType<ImplicitNavigatorState<T>>() ??
-              navigator;
+      navigator = context
+              .findRootAncestorStateOfType<ImplicitNavigatorState<dynamic>>() ??
+          navigator;
     } else {
       navigator ??=
-          context.findAncestorStateOfType<ImplicitNavigatorState<T>>();
+          context.findAncestorStateOfType<ImplicitNavigatorState<dynamic>>();
     }
     return navigator!;
   }
@@ -427,7 +461,11 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
         );
       }).toList(),
       onPopPage: (route, dynamic result) {
-        return pop();
+        throw AssertionError(
+          'Called Navigator.of(context).pop() on an implicit navigator. This'
+          ' should never be called directly, use'
+          ' ImplicitNavigator.of(context)!.popFromTree() instead.',
+        );
       },
     );
     if (isRoot) {
@@ -496,7 +534,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
 
   void _updateDisplayBackButton() {
     ImplicitNavigatorState._displayBackButton.value =
-        ImplicitNavigator.of<dynamic>(context, root: true).treeCanPop;
+        ImplicitNavigator.of(context, root: true).treeCanPop;
   }
 
   List<ImplicitNavigatorState> _prioritySorted(
@@ -522,7 +560,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
 ///
 /// Use the animation arguments if you want to animate sub-widgets within the
 /// builder independently. To animate the entire builder in and out together,
-/// use [routeTransitionsBuilder].
+/// use [ImplicitNavigator.transitionsBuilder].
 typedef AnimatedValueWidgetBuilder<T> = Widget Function(
   BuildContext context,
   T value,
