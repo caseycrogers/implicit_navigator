@@ -2,7 +2,7 @@ name: implicit_navigator
 description: An intuitive and highly flexible navigation system with an easy to use API.
 repository: https://github.com/caseycrogers/implicit_navigator
 
-version: 0.0.6
+version: 0.1.0
 
 environment:
   sdk: ">=2.12.0 <3.0.0"

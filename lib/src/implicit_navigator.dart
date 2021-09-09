@@ -79,7 +79,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
   ImplicitNavigator.fromNotifier({
     this.key,
     required ValueNotifier<T> valueNotifier,
-    int Function(T value)? getDepth,
+    int? Function(T value)? getDepth,
     this.initialHistory,
     required this.builder,
     this.transitionsBuilder = defaultRouteTransitionsBuilder,
@@ -131,7 +131,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
 
   /// State specific to [ImplicitNavigator.fromNotifier].
   final ValueNotifier<T>? _valueNotifier;
-  final int Function(T newValue)? _getDepth;
+  final int? Function(T newValue)? _getDepth;
 
   /// See [Widget.key].
   ///

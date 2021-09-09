@@ -22,3 +22,7 @@
 ## [0.0.6] - 09/07/2021
 
 * Fixed bug where exception is thrown if the user passes in an ungrowable list for `initialHistory`.
+
+## [0.1.0] - 09/07/2021
+
+* Allow `getDepth` to return null for mixed-style navigation.
