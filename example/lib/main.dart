@@ -56,9 +56,7 @@ class _BooksAppState extends State<BooksApp> {
             );
           },
           transitionsBuilder: ImplicitNavigator.materialRouteTransitionsBuilder,
-          onPop: (poppedBook, currentBook) {
-            _selectedBook = currentBook;
-          },
+          onPop: (poppedBook, currentBook) => _selectedBook = currentBook,
         ),
       ),
     );

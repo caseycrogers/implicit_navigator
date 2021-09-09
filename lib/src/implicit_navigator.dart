@@ -30,27 +30,26 @@ import 'navigator_notification.dart';
 /// For browser-style navigation, simply leave [depth] null and do not provide
 /// a `PageStorageKey` to any nested [ImplicitNavigator]'s.
 ///
-/// The following code implements a trivial browser-style [ImplicitNavigator]:
+/// The following code implements a trivial browser-style Implicit Navigator:
 /// ```dart
-///   int _index = 0;
+/// int _index = 0;
 ///
-///   @override
-///   Widget build(BuildContext context) {
-///     return ImplicitNavigator<int>(
-///       value: _index,
-///       builder: (context, index, animation, secondaryAnimation) {
-///         return TextButton(
-///           onPressed: () => setState(() {
-///             _index += 1;
-///           }),
-///           child: Text(index.toString()),
-///         );
-///       },
-///       onPop: (poppedValue, currentValue) {
-///         _index = currentValue;
-///       },
-///     );
-///   }
+/// @override
+/// Widget build(BuildContext context) {
+///   return ImplicitNavigator<int>(
+///     value: _index,
+///     builder: (context, index, animation, secondaryAnimation) {
+///       return TextButton(
+///         onPressed: () => setState(() {
+///           _index += 1;
+///         }),
+///         onLongPress: () => ImplicitNavigator.of(context).popFromTree()
+///         child: Text(index.toString()),
+///       );
+///     },
+///     onPop: (poppedValue, currentValue) => _index = currentValue,
+///   );
+/// }
 /// ```
 class ImplicitNavigator<T> extends StatefulWidget {
   const ImplicitNavigator({
@@ -384,7 +383,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
         cachedStack is List<ValueHistoryEntry<T>>) {
       _stack = cachedStack;
     } else if (widget.initialHistory != null) {
-      _stack = widget.initialHistory!;
+      _stack = List.from(widget.initialHistory!);
       // Ensure initial history gets cached.
       PageStorage.of(context)!.writeState(context, _stack);
     } else {

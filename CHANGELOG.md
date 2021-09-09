@@ -18,3 +18,7 @@
 
 * Replaced the overly complex example with a rendition of the book app example from the Flutter Navigation tutorial.
 * Overhauled the readme with simple example snippets.
+
+## [0.0.6] - 09/07/2021
+
+* Fixed bug where exception is thrown if the user passes in an ungrowable list for `initialHistory`.
