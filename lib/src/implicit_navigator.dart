@@ -61,6 +61,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     this.transitionsBuilder = defaultRouteTransitionsBuilder,
     this.transitionDuration = const Duration(milliseconds: 300),
     this.onPop,
+    this.takeFocus = false,
     this.maintainState = true,
     this.opaque = true,
     this.popPriority,
@@ -85,6 +86,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     this.transitionsBuilder = defaultRouteTransitionsBuilder,
     this.transitionDuration = const Duration(milliseconds: 300),
     this.onPop,
+    this.takeFocus = false,
     this.maintainState = true,
     this.opaque = true,
     this.popPriority,
@@ -178,11 +180,17 @@ class ImplicitNavigator<T> extends StatefulWidget {
   /// See [TransitionRoute.transitionDuration].
   final Duration transitionDuration;
 
+  /// Whether or not new routes pushed to `ImplicitNavigator` should request
+  /// focus as they're pushed.
+  ///
+  /// Unless your pages are fullscreen, you probably want to leave this false.
+  final bool takeFocus;
+
   /// See [ModalRoute.maintainState].
   ///
   /// Setting [maintainState] to false will reset an inner implicit navigator's
   /// history stack if a user navigates away from it and then returns to it via
-  /// [pop]/[popFromTree] unless [key] is set to [PageStorageKey].
+  /// [_pop]/[popFromTree] unless [key] is set to [PageStorageKey].
   final bool maintainState;
 
   /// See [TransitionRoute.opaque].
@@ -263,16 +271,16 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
 
   /// Whether or not this implicit navigator has seen any previous values that
   /// it can pop to.
-  bool get canPop {
+  bool get shallowCanPop {
     return _stack.length > 1;
   }
 
   /// Whether or not this implicit navigator or any implicit navigators below it
   /// can pop.
-  bool get treeCanPop {
+  bool get canPop {
     return navigatorTree
         .expand((navigators) => navigators)
-        .any((navigator) => navigator.canPop);
+        .any((navigator) => navigator.shallowCanPop);
   }
 
   /// Whether or not this value is below any other implicit navigators in the
@@ -288,12 +296,13 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   List<ImplicitNavigatorState<Object?>> get children =>
       _children.toList(growable: false);
 
-  /// A tree of this implicit navigator and all active (see [isActive]) value
-  /// navigators currently in the widget tree below it.
+  /// A tree containing all active (see [isActive]) implicit navigators
+  /// currently in the widget tree at or below this navigator.
+  ///
+  /// See [isActive].
   List<List<ImplicitNavigatorState<Object?>>> get navigatorTree {
     if (!isActive) {
-      // This navigator is currently disabled or in an inactive page route. It
-      // is technically in the widget tree, but it's
+      // This navigator is currently disabled or in an inactive page route.
       return [];
     }
     return [
@@ -314,7 +323,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   void disablePop() {
     if (!_disabled) {
       _disabled = true;
-      _updateDisplayBackButton();
+      _onStackChanged();
     }
   }
 
@@ -322,7 +331,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   void enablePop() {
     if (_disabled) {
       _disabled = false;
-      _updateDisplayBackButton();
+      _onStackChanged();
     }
   }
 
@@ -340,20 +349,20 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   /// Navigators are tested in reverse level order-the most nested navigators
   /// attempt to pop first. Returns true if popping is successful.
   /// If two or more navigators are at the same level, they are tested in order
-  /// of their [popPriority]: least to greatest followed by null.
-  bool popFromTree() {
+  /// of their pop priority: least to greatest followed by null.
+  ///
+  /// If [searchTree] is set to false, only this navigator will attempt to
+  /// handle the pop.
+  bool pop({bool searchTree = true}) {
+    if (!searchTree) {
+      return _pop();
+    }
     return navigatorTree.reversed
         .expand(_prioritySorted)
-        // `any` short circuits when it finds a true element so this will stop
-        // calling pop if any call to pop succeeds.
-        .any((navigator) => navigator.pop());
+        .any((navigator) => navigator._pop());
   }
 
-  /// Attempt to pop from this navigator.
-  ///
-  /// Returns true if the pop was successful. Usually this function should not
-  /// be called directly and [popFromTree] should be used instead.
-  bool pop() {
+  bool _pop() {
     if (_stack.length == 1 || !isActive) {
       return false;
     }
@@ -375,7 +384,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     _maybeInitNotifier();
     final ValueHistoryEntry<T> newEntry = _latestEntry;
     if (isRoot) {
-      _backButtonOnPressed = popFromTree;
+      _backButtonOnPressed = pop;
     }
     _parent?._registerChild(this);
     final dynamic cachedStack = PageStorage.of(context)!.readState(context);
@@ -394,7 +403,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     _addIfNew(newEntry);
     // Ensure this is called even if `addIfNew` did not call it.
     WidgetsBinding.instance!.addPostFrameCallback((_) {
-      _updateDisplayBackButton();
+      _onStackChanged();
     });
     super.initState();
   }
@@ -455,6 +464,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
           builder: widget.builder,
           transitionsBuilder: widget.transitionsBuilder,
           transitionDuration: widget.transitionDuration,
+          takeFocus: widget.takeFocus,
           maintainState: widget.maintainState,
           opaque: widget.opaque,
         );
@@ -470,7 +480,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     if (isRoot) {
       return WillPopScope(
         onWillPop: () async {
-          return !popFromTree();
+          return !pop();
         },
         child: internalNavigator,
       );
@@ -504,14 +514,14 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
       PageStorage.of(context)!.writeState(context, _stack);
     }
     WidgetsBinding.instance!.addPostFrameCallback((_) {
-      _updateDisplayBackButton();
-      PushNotification<T>(
-        currentValue: newEntry.value,
-        currentDepth: newEntry.depth,
-        previousValue: prevEntry.value,
-        previousDepth: prevEntry.depth,
-      ).dispatch(context);
+      _onStackChanged();
     });
+    PushNotification<T>(
+      currentValue: newEntry.value,
+      currentDepth: newEntry.depth,
+      previousValue: prevEntry.value,
+      previousDepth: prevEntry.depth,
+    ).dispatch(context);
   }
 
   T _popEntry() {
@@ -520,20 +530,20 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
       PageStorage.of(context)!.writeState(context, _stack);
     }
     WidgetsBinding.instance!.addPostFrameCallback((_) {
-      _updateDisplayBackButton();
-      PopNotification<T>(
-        currentValue: _stack.last.value,
-        currentDepth: _stack.last.depth,
-        previousValue: poppedEntry.value,
-        previousDepth: poppedEntry.depth,
-      ).dispatch(context);
+      _onStackChanged();
     });
+    PopNotification<T>(
+      currentValue: _stack.last.value,
+      currentDepth: _stack.last.depth,
+      previousValue: poppedEntry.value,
+      previousDepth: poppedEntry.depth,
+    ).dispatch(context);
     return poppedEntry.value;
   }
 
-  void _updateDisplayBackButton() {
+  void _onStackChanged() {
     ImplicitNavigatorState._displayBackButton.value =
-        ImplicitNavigator.of(context, root: true).treeCanPop;
+        ImplicitNavigator.of(context, root: true).canPop;
   }
 
   List<ImplicitNavigatorState> _prioritySorted(
@@ -630,9 +640,12 @@ class ImplicitNavigatorBackButton extends StatelessWidget {
           },
         );
       },
-      child: BackButton(
-        // Nested function call to avoid late initialization error.
-        onPressed: () => ImplicitNavigatorState._backButtonOnPressed(),
+      child: SizedBox(
+        width: kToolbarHeight,
+        child: BackButton(
+          // Nested function call to avoid late initialization error.
+          onPressed: () => ImplicitNavigatorState._backButtonOnPressed(),
+        ),
       ),
     );
   }

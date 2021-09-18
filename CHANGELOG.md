@@ -14,15 +14,21 @@
 
 * Added example code to documentation.
 
-## [0.0.5] - 09/07/2021
+## [0.0.5] - 09/08/2021
 
 * Replaced the overly complex example with a rendition of the book app example from the Flutter Navigation tutorial.
 * Overhauled the readme with simple example snippets.
 
-## [0.0.6] - 09/07/2021
+## [0.0.6] - 09/09/2021
 
 * Fixed bug where exception is thrown if the user passes in an ungrowable list for `initialHistory`.
 
-## [0.1.0] - 09/07/2021
+## [0.1.0] - 09/09/2021
 
 * Allow `getDepth` to return null for mixed-style navigation.
+
+## [0.2.0] - 09/09/2021
+
+* Replaced `popFromTree` and `pop` with a single function with optional bool input.
+* Used route workaround to prevent routes from stealing focus (see https://github.com/flutter/flutter/issues/53441).
+* Renamed `canPopFromTree` and `canPop` to `canPop` and `shallowCanPop`, respectively.

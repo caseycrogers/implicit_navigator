@@ -1,5 +1,5 @@
 name: implicit_navigator
-description: An intuitive and highly flexible navigation system with an easy to use API.
+description: An easy and intuitive navigator that updates the page stack in response to app state changes and the system back button.
 repository: https://github.com/caseycrogers/implicit_navigator
 
 version: 0.1.0

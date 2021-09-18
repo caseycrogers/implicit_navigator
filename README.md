@@ -1,7 +1,5 @@
-An intuitive and highly flexible navigation system with an easy to use API.
-
-Implicit Navigator updates the page stack in response to app state changes and the system back button, just build your
-widget tree and Implicit Navigator will handle the rest!
+An easy and intuitive navigator that updates the page stack in response to app state changes and the system back button.
+Just build your widget tree and Implicit Navigator will handle the rest!
 
 ## Core Features
 
@@ -17,9 +15,9 @@ inner most navigator first.
 
 ## Getting Started
 
-First decide if you want to use app or browser style navigation. Below are samples for each style but this is just a
+First decide if you want to use app or browser style navigation. Below are samples for each style, but this is just a
 starting off point! You can set the navigation style based on the current platform or mix and match styles in different
-navigators within the same app!
+navigators within the same app.
 
 ### App-Style Navigation
 
@@ -50,14 +48,14 @@ class _AppStyleState extends State<AppStyle> {
 ```
 
 `ImplicitNavigator` takes an optional `depth` parameter which represents where the user currently is in the app's
-navigation flow. When the back button is pressed, the app state is returned to the last value of lower depth. ie, the
-user moves "up" the navigation flow to a shallower depth.
+navigation flow. When the back button is pressed, the app state is returned to the last value of less depth. ie, the
+user moves "up" the navigation flow.
 
 Using the above example code, imagine a user navigates through the pages as follows:
 
 `depth_0:_index=null > depth_1:_index=0 > depth_1:_index=1`
 
-If the user then presses back, they will go **up** in the navigation flow to depth 0: `depth_0:_index=0`, **not**
+If the user then presses back, they will go **up** in the navigation flow to depth 0: `depth_0:_index=null`, **not**
 `depth_1:_index=0`.
 
 If Implicit Navigators are nested within each other in the widget tree, you should build each inner navigator with a
