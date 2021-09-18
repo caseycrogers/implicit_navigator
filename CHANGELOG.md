@@ -27,7 +27,7 @@
 
 * Allow `getDepth` to return null for mixed-style navigation.
 
-## [0.2.0] - 09/09/2021
+## [0.2.0] - 09/18/2021
 
 * Replaced `popFromTree` and `pop` with a single function with optional bool input.
 * Used route workaround to prevent routes from stealing focus (see https://github.com/flutter/flutter/issues/53441).
