@@ -32,3 +32,4 @@
 * Replaced `popFromTree` and `pop` with a single function with optional bool input.
 * Used route workaround to prevent routes from stealing focus (see https://github.com/flutter/flutter/issues/53441).
 * Renamed `canPopFromTree` and `canPop` to `canPop` and `shallowCanPop`, respectively.
+* Fixed example's scaffold placement to match official flutter example.

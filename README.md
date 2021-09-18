@@ -123,8 +123,6 @@ handling deep links). This is intentional-routing is highly complex and, in my o
 separation of concerns for a navigator package. To handle routing, use the router of your choice to parse incoming
 routes and rebuild the widget tree with the new app state according to the incoming routes. `Implicit Navigator` will
 see any relevant state changes and push the appropriate pages in response.
-* Navigator pages fail to rebuild on hot reload. You have rebuild the page via hot restart or by manually forcing a
-rebuild of the current page(s). I'm looking into this and will fix it if I can.
 
 ## Contributing
 
