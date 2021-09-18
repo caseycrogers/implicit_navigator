@@ -37,7 +37,7 @@ class _AppStyleState extends State<AppStyle> {
           onPressed: () => setState(() {
             _index = (index ?? -1) + 1;
           }),
-          onLongPress: () => ImplicitNavigator.of(context).popFromTree(),
+          onLongPress: () => ImplicitNavigator.of<int?>(context).pop(),
           child: Text((index ?? 'Tap To Increment').toString()),
         );
       },
@@ -79,7 +79,7 @@ class _BrowserStyleState extends State<BrowserStyle> {
           onPressed: () => setState(() {
             _index = (_index ?? -1) + 1;
           }),
-          onLongPress: () => ImplicitNavigator.of(context).popFromTree(),
+          onLongPress: () => ImplicitNavigator.of<int?>(context).pop(),
           child: Text((index ?? 'Tap To Increment').toString()),
         );
       },
@@ -101,17 +101,18 @@ If the user then presses back, they will go back to the previous page/app state:
 ## How It Works
 
 Implicit Navigator is built on top of the Flutter Navigator 2.0 API. Implicit Navigators operate similar to
-`ValueListenableBuilder`: each one takes in a changing value and a builder. Whenever a new value is supplied, a new page
-is added to the internal navigator's page stack. When pop is called (by the system or programmatically), the topmost
-page is popped and the builder is called with the new topmost value. An `onPop` callback can be used to revert any state
-outside of the navigator.
+`ValueListenableBuilder`: each one takes in a changing value and a builder. Whenever a new value and/or depth is
+supplied, a new page is added to the internal navigator's page stack. When pop is called (by the system or
+programmatically), the topmost page is popped and the builder is called with the new topmost value. An `onPop` callback
+can be used to revert any state outside of the navigator.
 
 As a convenience method, `ImplicitNavigator.fromNotifier` wraps a `ValueNotifier`. It pushes to the navigator stack when
-the notifier changes and rolls the value of the notifier back when pop is called.
+the notifier changes and automatically rolls the value of the notifier back when pop is called.
 
 When the system back button is called (or pop is called programmatically), `ImplicitNavigator` attempts to pop from the
-deepest navigator in the tree, working it's way up to the root navigator until it finds a navigator that can handle the
-pop.
+deepest active navigator in the tree, working it's way up to the root navigator until it finds an active navigator that
+can handle the pop. A navigator is active if it is in the topmost route of the root navigator and it has not been
+manually disabled via `ImplicitNavigator.of(context).canPop = false`.
 
 `ImplicitNavigatorBackButton` is also provided as a convenience widget. Use it in your app bar's `leading` argument to
 display a back button that is visible whenever **any** Implicit Navigator in the widget tree can pop.

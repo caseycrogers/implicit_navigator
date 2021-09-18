@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:implicit_navigator/implicit_navigator.dart';
 
@@ -12,15 +13,38 @@ abstract class ImplicitNavigatorNotification<T> extends Notification {
     required this.previousDepth,
   });
 
+  /// The current value of [ImplicitNavigator.value] for the navigator that
+  /// dispatched this notification.
+  ///
+  /// This is the value **after** the action corresponding to this notification
+  /// completed.
   final T currentValue;
+
+  /// The current value of [ImplicitNavigator.depth] for the navigator that
+  /// dispatched this notification.
+  ///
+  /// This is the depth **after** the action corresponding to this notification
+  /// completed.
   final int? currentDepth;
 
+
+  /// The old value of [ImplicitNavigator.value] from **before** the action
+  /// corresponding to this notification was executed.
   final T previousValue;
+
+
+  /// The old value of [ImplicitNavigator.depth] from **before** the action
+  /// corresponding to this notification was executed.
   final int? previousDepth;
 }
 
-/// A notification that is dispatched whenever an [ImplicitNavigator]'s
-/// finishing popping from it's internal navigation stack.
+/// A notification that is dispatched whenever an [ImplicitNavigator] pops a
+/// value and depth from it's internal navigation stack.
+///
+/// Current depth/value correspond to the new depth and value after the pop is
+/// complete.
+/// Previous depth/value correspond to the depth and value that were popped from
+/// the stack.
 class PopNotification<T> extends ImplicitNavigatorNotification<T> {
   const PopNotification({
     required T currentValue,
@@ -35,8 +59,13 @@ class PopNotification<T> extends ImplicitNavigatorNotification<T> {
         );
 }
 
-/// A notification that is dispatched whenever an [ImplicitNavigator]'s
-/// pushes a new value to it's internal navigation stack.
+/// A notification that is dispatched whenever an [ImplicitNavigator] pushes a
+/// new value and/or depth to it's internal navigation stack.
+///
+/// Current depth/value correspond to the new depth and value that were pushed
+/// onto the stack.
+/// Previous depth/value correspond to the depth and value that were on top of
+/// the stack before the push was executed.
 class PushNotification<T> extends ImplicitNavigatorNotification<T> {
   const PushNotification({
     required T currentValue,

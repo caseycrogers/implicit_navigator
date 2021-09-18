@@ -33,3 +33,11 @@
 * Used route workaround to prevent routes from stealing focus (see https://github.com/flutter/flutter/issues/53441).
 * Renamed `canPopFromTree` and `canPop` to `canPop` and `shallowCanPop`, respectively.
 * Fixed example's scaffold placement to match official flutter example.
+
+
+## [0.3.0] - 09/18/2021
+
+* Replace enablePop/disablePop with a `canPop` setter.
+* Added type parameter back to `ImplicitNavigator.of()`
+* Fixed readme examples.
+* Improved notification documentation.

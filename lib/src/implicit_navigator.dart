@@ -210,22 +210,22 @@ class ImplicitNavigator<T> extends StatefulWidget {
   final int? popPriority;
 
   /// Get the nearest ancestor [ImplicitNavigatorState] in the widget tree.
-  static ImplicitNavigatorState<dynamic> of(
+  static ImplicitNavigatorState<T> of<T>(
     BuildContext context, {
     bool root = false,
   }) {
-    ImplicitNavigatorState<dynamic>? navigator;
+    ImplicitNavigatorState<T>? navigator;
     if (context is StatefulElement &&
-        context.state is ImplicitNavigatorState<dynamic>) {
-      navigator = context.state as ImplicitNavigatorState<dynamic>;
+        context.state is ImplicitNavigatorState<T>) {
+      navigator = context.state as ImplicitNavigatorState<T>;
     }
     if (root) {
       navigator = context
-              .findRootAncestorStateOfType<ImplicitNavigatorState<dynamic>>() ??
+              .findRootAncestorStateOfType<ImplicitNavigatorState<T>>() ??
           navigator;
     } else {
       navigator ??=
-          context.findAncestorStateOfType<ImplicitNavigatorState<dynamic>>();
+          context.findAncestorStateOfType<ImplicitNavigatorState<T>>();
     }
     return navigator!;
   }
@@ -311,26 +311,16 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     ];
   }
 
-  bool _disabled = false;
+  bool _canPop = true;
 
-  /// Set this implicit navigator and all those below it to ignore attempts to
-  /// pop (including from the system back button).
+  /// Set whether or not this implicit navigator and all those below it should
+  /// ignore attempts to pop (including from the system back button).
   ///
-  /// Disable a implicit navigator if you wish to take it off stage and as such
-  /// do not want it intercepting calls to pop. eg if you have an implicit
-  /// navigator inside of a [PageView], you would not want it popping while it
-  /// is not on screen.
-  void disablePop() {
-    if (!_disabled) {
-      _disabled = true;
-      _onStackChanged();
-    }
-  }
-
-  /// If this implicit navigator is currently disabled, enable it.
-  void enablePop() {
-    if (_disabled) {
-      _disabled = false;
+  /// Set [canPop] to false if you are taking this navigator off stage and do
+  /// not want it intercepting calls to pop.
+  set canPop(bool newValue) {
+    if (_canPop != newValue) {
+      _canPop = newValue;
       _onStackChanged();
     }
   }
@@ -338,7 +328,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   /// Whether or not this implicit navigator is enabled AND is currently at the
   /// top of all parent implicit navigator's history stacks.
   bool get isActive {
-    return !_disabled &&
+    return _canPop &&
         (ModalRoute.of(context)?.isCurrent ?? true) &&
         (isRoot || parent!.isActive);
   }
@@ -543,7 +533,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
 
   void _onStackChanged() {
     ImplicitNavigatorState._displayBackButton.value =
-        ImplicitNavigator.of(context, root: true).canPop;
+        ImplicitNavigator.of<dynamic>(context, root: true).canPop;
   }
 
   List<ImplicitNavigatorState> _prioritySorted(
