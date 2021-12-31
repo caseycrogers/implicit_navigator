@@ -28,6 +28,7 @@ class BooksApp extends StatefulWidget {
 
 class _BooksAppState extends State<BooksApp> {
   Book? _selectedBook;
+  int value = 0;
 
   static const List<Book> books = [
     Book('Left Hand of Darkness', 'Ursula K. Le Guin'),
