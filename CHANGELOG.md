@@ -46,9 +46,9 @@
 ## [1.0.0] - 01/01/2022
 
 * Added `SelectFromListenable` by request of @cldrgaon.
-* Added `maintainHistory` to determine if page history should be written and restored.
+* Added `maintainHistory` to determine if page history should be written and restored instead of using `key`.
 * Renamed `fromNotifier` to `fromValueNotifier`
 * Made `onPop` required for relevant constructors/static methods.
 * Renamed `currentValue` to `valueAfterPop`.
-* Replaced alternate constructors to static methods and moved logic into wrapping widgets.
+* Replaced alternate constructors with static methods and moved logic into wrapping widgets.
 * Added basic unit tests.
