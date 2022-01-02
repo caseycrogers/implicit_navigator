@@ -41,3 +41,14 @@
 * Added type parameter back to `ImplicitNavigator.of()`
 * Fixed readme examples.
 * Improved notification documentation.
+
+
+## [1.0.0] - 01/01/2022
+
+* Added `SelectFromListenable` by request of @cldrgaon.
+* Added `maintainHistory` to determine if page history should be written and restored.
+* Renamed `fromNotifier` to `fromValueNotifier`
+* Made `onPop` required for relevant constructors/static methods.
+* Renamed `currentValue` to `valueAfterPop`.
+* Replaced alternate constructors to static methods and moved logic into wrapping widgets.
+* Added basic unit tests.

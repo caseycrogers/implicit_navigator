@@ -7,7 +7,7 @@ import 'package:implicit_navigator/implicit_navigator.dart';
 @immutable
 abstract class ImplicitNavigatorNotification<T> extends Notification {
   const ImplicitNavigatorNotification({
-    required this.currentValue,
+    required this.valueAfterPop,
     required this.currentDepth,
     required this.previousValue,
     required this.previousDepth,
@@ -18,7 +18,7 @@ abstract class ImplicitNavigatorNotification<T> extends Notification {
   ///
   /// This is the value **after** the action corresponding to this notification
   /// completed.
-  final T currentValue;
+  final T valueAfterPop;
 
   /// The current value of [ImplicitNavigator.depth] for the navigator that
   /// dispatched this notification.
@@ -27,11 +27,9 @@ abstract class ImplicitNavigatorNotification<T> extends Notification {
   /// completed.
   final int? currentDepth;
 
-
   /// The old value of [ImplicitNavigator.value] from **before** the action
   /// corresponding to this notification was executed.
   final T previousValue;
-
 
   /// The old value of [ImplicitNavigator.depth] from **before** the action
   /// corresponding to this notification was executed.
@@ -47,12 +45,12 @@ abstract class ImplicitNavigatorNotification<T> extends Notification {
 /// the stack.
 class PopNotification<T> extends ImplicitNavigatorNotification<T> {
   const PopNotification({
-    required T currentValue,
+    required T valueAfterPop,
     required int? currentDepth,
     required T previousValue,
     required int? previousDepth,
   }) : super(
-          currentValue: currentValue,
+          valueAfterPop: valueAfterPop,
           currentDepth: currentDepth,
           previousValue: previousValue,
           previousDepth: previousDepth,
@@ -68,12 +66,12 @@ class PopNotification<T> extends ImplicitNavigatorNotification<T> {
 /// the stack before the push was executed.
 class PushNotification<T> extends ImplicitNavigatorNotification<T> {
   const PushNotification({
-    required T currentValue,
+    required T valueAfterPop,
     required int? currentDepth,
     required T previousValue,
     required int? previousDepth,
   }) : super(
-          currentValue: currentValue,
+          valueAfterPop: valueAfterPop,
           currentDepth: currentDepth,
           previousValue: previousValue,
           previousDepth: previousDepth,

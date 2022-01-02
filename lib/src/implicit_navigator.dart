@@ -8,11 +8,12 @@ import 'navigator_notification.dart';
 /// Pushes and pops pages from an internal navigator in response to changing app
 /// state.
 ///
-/// When [value] and/or [depth] change, a new page is pushed onto the navigator
-/// stack and [builder] is called with the latest [value]. When [popFromTree] is
-/// called or the system back button is pressed, [ImplicitNavigator] attempts to
-/// pop from any navigator in the tree, starting with deepest nested navigator
-/// first and breaking ties between equally deep navigators with [popPriority].
+/// When [ImplicitNavigator] is rebuilt with a new [value] and/or [depth], a new
+/// page is pushed onto the navigator stack and [builder] is called with the
+/// latest [value]. When [popFromTree] is called or the system back button is
+/// pressed, [ImplicitNavigator] attempts to pop from any navigator in the tree,
+/// starting with deepest nested navigator first and breaking ties between
+/// equally deep navigators with [popPriority].
 ///
 /// Implicit Navigator can be used to produce two distinct navigation patterns:
 ///  - App-Style: the back button/pop goes "up" a developer defined navigation
@@ -47,28 +48,33 @@ import 'navigator_notification.dart';
 ///         child: Text(index.toString()),
 ///       );
 ///     },
-///     onPop: (poppedValue, currentValue) => _index = currentValue,
+///     onPop: (poppedValue, valueAfterPop) => _index = valueAfterPop,
 ///   );
 /// }
 /// ```
 class ImplicitNavigator<T> extends StatefulWidget {
   /// Create an implicit navigator directly from a value.
   ///
-  /// Generally, [ImplicitNavigator.fromNotifier] is simpler to use-this
-  /// constructor should only be used over `fromNotifier` if updating [value]
-  /// is too complex to be handled by a `ValueNotifier`.
+  /// Like many widgets in the Flutter framework, [ImplicitNavigator] expects
+  /// that [value] will not be mutated after it has been passed in here.
+  /// Directly modifying [value] will result in incorrect behaviors. Whenever
+  /// you wish to modify the value, a new object should be provided.
   ///
-  /// To ensue [value] is updated when the user pops pages, update it in
-  /// [onPop]:
+  /// Generally, [ImplicitNavigator.fromValueNotifier] or
+  /// [ImplicitNavigator.selectFromListenable] are simpler and should be used
+  /// over this constructor.
+  ///
+  /// To ensue [value] is updated when a page is popped, update it in [onPop]:
   ///
   /// ```
   ///   value: myValue,
-  ///   onPop: (poppedValue, currentValue) {
-  ///     myValue = currentValue;
+  ///   onPop: (poppedValue, valueAfterPop) {
+  ///     myValue = valueAfterPop;
   ///   },
   /// ```
   const ImplicitNavigator({
-    this.key,
+    Key? key,
+    this.maintainHistory = false,
     required this.value,
     this.depth,
     this.initialHistory,
@@ -80,46 +86,66 @@ class ImplicitNavigator<T> extends StatefulWidget {
     this.maintainState = true,
     this.opaque = true,
     this.popPriority,
-  });
+  }) : super(key: key);
 
-  /// Creates an [ImplicitNavigator] that pushes new pages when the
-  /// [valueNotifier] changes and reverts [valueNotifier.value] when pages are
-  /// popped.
+  /// Creates an [ImplicitNavigator] that pushes new pages when a value selected
+  /// from a [listenable] changes.
   ///
-  /// If non-null, [getDepth] we be called on each value and used to set
+  /// A [selector] function is used to pick a value from [listenable]. If the
+  /// listenable changes but [selector] returns the same value, no new
+  /// pages are pushed.
+  ///
+  /// For example, the following creates a navigator that pushes and pops pages
+  /// as a tab controller changes tabs:
+  ///
+  /// ```dart
+  /// return ImplicitNavigator.selectFromListenable<ScrollController, double>(
+  ///   listenable: myTabController,
+  ///   selector: () => myTabController.index,
+  ///   builder (context, tabIndex, animation, secondaryAnimation) {
+  ///     return MyTabPage(index: tabIndex);
+  ///   },
+  ///   onPop: (poppedIndex, indexAfterPop) {
+  ///     myTabController.index = indexAfterPop;
+  ///   },
+  /// );
+  /// ```
+  ///
+  /// If non-null, [getDepth] will be called on each value and used to set
   /// [ImplicitNavigator.depth]. [getDepth] MUST return the same depth for a
   /// given value every time it's called on that value. If it returns
   /// inconsistent depths, [ImplicitNavigator] may push redundant pages and will
   /// not pop pages properly.
-  static Widget fromNotifier<T>({
+  static Widget selectFromListenable<U extends Listenable, T>({
     Key? key,
-    required ValueNotifier<T> valueNotifier,
+    bool maintainHistory = false,
+    required U listenable,
+    required T Function() selector,
     int? Function(T value)? getDepth,
     List<ValueHistoryEntry<T>>? initialHistory,
     required AnimatedValueWidgetBuilder<T> builder,
     RouteTransitionsBuilder transitionsBuilder = defaultRouteTransitionsBuilder,
     Duration transitionDuration = const Duration(milliseconds: 300),
-    void Function(T, T)? onPop,
+    required void Function(T, T) onPop,
     bool takeFocus = false,
     bool maintainState = true,
     bool opaque = true,
     int? popPriority,
   }) {
-    return ValueListenableBuilder<T>(
-      valueListenable: valueNotifier,
-      builder: (context, value, child) {
+    // Animated builder is actually just a misnamed `ListenableBuilder`.
+    return AnimatedBuilder(
+      key: key,
+      animation: listenable,
+      builder: (context, child) {
         return ImplicitNavigator<T>(
-          key: key,
-          value: valueNotifier.value,
-          depth: getDepth?.call(value),
+          maintainHistory: maintainHistory,
+          value: selector(),
+          depth: getDepth?.call(selector()),
           initialHistory: initialHistory,
           builder: builder,
           transitionsBuilder: transitionsBuilder,
           transitionDuration: transitionDuration,
-          onPop: (poppedValue, currentValue) {
-            valueNotifier.value = currentValue;
-            onPop?.call(poppedValue, currentValue);
-          },
+          onPop: onPop,
           takeFocus: takeFocus,
           maintainState: maintainState,
           opaque: opaque,
@@ -133,29 +159,50 @@ class ImplicitNavigator<T> extends StatefulWidget {
   /// [valueNotifier] changes and reverts [valueNotifier.value] when pages are
   /// popped.
   ///
-  /// If non-null, [getDepth] we be called on each value and used to set
+  /// If non-null, [getDepth] will be called on each value and used to set
   /// [ImplicitNavigator.depth]. [getDepth] MUST return the same depth for a
   /// given value every time it's called on that value. If it returns
   /// inconsistent depths, [ImplicitNavigator] may push redundant pages and will
   /// not pop pages properly.
-  //ImplicitNavigator.fromListenable({
-  //  this.key,
-  //  required Listenable listenable,
-  //  int? Function(T value)? getDepth,
-  //  this.initialHistory,
-  //  required this.builder,
-  //  this.transitionsBuilder = defaultRouteTransitionsBuilder,
-  //  this.transitionDuration = const Duration(milliseconds: 300),
-  //  void Function(T, T)? onPop,
-  //  this.takeFocus = false,
-  //  this.maintainState = true,
-  //  this.opaque = true,
-  //  this.popPriority,
-  //})  : onPop = (onPop ?? (poppedValue, currentValue) {}),
-  //      value = listenable,
-  //      depth = getDepth?.call(valueNotifier.value),
-  //      _valueNotifier = valueNotifier,
-  //      _getDepth = getDepth;
+  static Widget fromValueNotifier<T>({
+    Key? key,
+    bool maintainHistory = false,
+    required ValueNotifier<T> valueNotifier,
+    int? Function(T value)? getDepth,
+    List<ValueHistoryEntry<T>>? initialHistory,
+    required AnimatedValueWidgetBuilder<T> builder,
+    RouteTransitionsBuilder transitionsBuilder = defaultRouteTransitionsBuilder,
+    Duration transitionDuration = const Duration(milliseconds: 300),
+    void Function(T, T)? onPop,
+    bool takeFocus = false,
+    bool maintainState = true,
+    bool opaque = true,
+    int? popPriority,
+  }) {
+    return ValueListenableBuilder<T>(
+      key: key,
+      valueListenable: valueNotifier,
+      builder: (context, value, child) {
+        return ImplicitNavigator<T>(
+          maintainHistory: maintainHistory,
+          value: valueNotifier.value,
+          depth: getDepth?.call(value),
+          initialHistory: initialHistory,
+          builder: builder,
+          transitionsBuilder: transitionsBuilder,
+          transitionDuration: transitionDuration,
+          onPop: (poppedValue, valueAfterPop) {
+            valueNotifier.value = valueAfterPop;
+            onPop?.call(poppedValue, valueAfterPop);
+          },
+          takeFocus: takeFocus,
+          maintainState: maintainState,
+          opaque: opaque,
+          popPriority: popPriority,
+        );
+      },
+    );
+  }
 
   /// The default [RouteTransitionsBuilder] used by [ImplicitNavigator] to
   /// animate content in and out.
@@ -193,12 +240,22 @@ class ImplicitNavigator<T> extends StatefulWidget {
         );
   }
 
-  /// See [Widget.key].
+  /// Whether or not this widget should save and restore it's value history to
+  /// page storage.
   ///
-  /// If key is a [PageStorageKey], this widget will use page storage to
-  /// save and (on reinitialization) restore it's history stack.
-  @override
-  final Key? key;
+  /// If this is true, the page history of an inner nested navigator will be
+  /// retained if the user navigates away from it and then back to it.
+  ///
+  /// This should typically be false for all browser style navigators and true
+  /// for nested app style navigators.
+  ///
+  /// If [maintainHistory] is true, [key] should be set to a [PageStorageKey] to
+  /// ensure that different nested implicit navigators don't overwrite each
+  /// other's page storage.
+  ///
+  /// Also see [maintainState], which keeps pages in memory so that they aren't
+  /// rebuilt when a page above is popped.
+  final bool maintainHistory;
 
   /// The current value to build the navigator with.
   ///
@@ -221,8 +278,8 @@ class ImplicitNavigator<T> extends StatefulWidget {
 
   /// A history stack to initialize this [ImplicitNavigator] with.
   ///
-  /// If a `PageStorageKey` is provided and a cached history stack is available
-  /// at initialization, the cached stack will be used and [initialHistory] will
+  /// If [maintainHistory] is true and a cached history stack is available at
+  /// initialization, the cached stack will be used and [initialHistory] will
   /// be ignored.
   final List<ValueHistoryEntry<T>>? initialHistory;
 
@@ -244,11 +301,19 @@ class ImplicitNavigator<T> extends StatefulWidget {
   /// Unless your pages are fullscreen, you probably want to leave this false.
   final bool takeFocus;
 
-  /// See [ModalRoute.maintainState].
+  /// Whether or not a page should be restored with its original state or
+  /// rebuilt when a page on top of it is popped.
   ///
-  /// Setting [maintainState] to false will reset an inner implicit navigator's
-  /// history stack if a user navigates away from it and then returns to it via
-  /// [_pop]/[popFromTree] unless [key] is set to [PageStorageKey].
+  /// If an implicit navigator is nested within another navigator, setting this
+  /// to false will mean the inner navigator loses its page history if the user
+  /// navigates away from it and then presses back and returns to it.
+  ///
+  /// If [maintainHistory] is true, then an inner nested navigator will restore
+  /// it's state even if [maintainState] is false.
+  ///
+  /// This should almost always be left as its the default value `true`.
+  ///
+  /// See [ModalRoute.maintainState].
   final bool maintainState;
 
   /// See [TransitionRoute.opaque].
@@ -256,12 +321,18 @@ class ImplicitNavigator<T> extends StatefulWidget {
 
   /// A callback that runs immediately after a page is popped.
   ///
-  /// If using [ImplicitNavigator]  (instead of
-  /// [ImplicitNavigator.fromNotifier]) this function should set external state
-  /// to [currentValue] to keep it in sync with the implicit navigator when
-  /// pages are popped.
-  /// See: [ImplicitNavigator].
-  final void Function(T poppedValue, T currentValue) onPop;
+  /// The popped value is passed in as [poppedValue]. The new page value after
+  /// popping is passed in as [valueAfterPop].
+  ///
+  /// Unless using [ImplicitNavigator.fromValueNotifier] which manages state for
+  /// you, this function should be used to revert external state to
+  /// [valueAfterPop]:
+  ///
+  /// ```dart
+  ///   value: myValue,
+  ///   onPop: (poppedValue, valueAfterPop) => myValue = valueAfterPop,
+  /// ```
+  final void Function(T poppedValue, T valueAfterPop) onPop;
 
   /// The priority of this widget when choosing which implicit navigator to pop
   /// from.
@@ -270,7 +341,8 @@ class ImplicitNavigator<T> extends StatefulWidget {
   ///
   /// Implicit navigator always attempts to pop from the inner most navigators
   /// first, it'll only consider pop priority when deciding between two implicit
-  /// navigators at the same depth in the [navigatorTree].
+  /// navigators at the same depth in the [navigatorTree]-eg if two navigators
+  /// are side by side in a [Row].
   final int? popPriority;
 
   /// Get the nearest ancestor [ImplicitNavigatorState] in the widget tree.
@@ -441,18 +513,21 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
       _backButtonOnPressed = pop;
     }
     _parent?._registerChild(this);
-    assert(
-        PageStorage.of(context) != null,
+    final PageStorageBucket? pageStorage = PageStorage.of(context);
+    if (widget.maintainHistory) {
+      assert(
+        pageStorage != null,
         'Could not find a page storage bucket above this implicit navigator.'
-        ' Try wrapping this widget in a`MaterialApp` or `PageStorage` widget.');
-    final dynamic cachedStack = PageStorage.of(context)!.readState(context);
-    if (widget.key is PageStorageKey &&
-        cachedStack is List<ValueHistoryEntry<T>>) {
+        ' Try wrapping this widget in a`MaterialApp` or `PageStorage` widget.',
+      );
+    }
+    final dynamic cachedStack = pageStorage?.readState(context);
+    if (cachedStack is List<ValueHistoryEntry<T>>) {
       _stack = cachedStack;
     } else if (widget.initialHistory != null) {
       _stack = List.from(widget.initialHistory!);
       // Ensure initial history gets cached.
-      PageStorage.of(context)!.writeState(context, _stack);
+      pageStorage?.writeState(context, _stack);
     } else {
       _stack = [newEntry];
     }
@@ -500,7 +575,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
         throw AssertionError(
           'Called Navigator.of(context).pop() on an implicit navigator. This'
           ' should never be called directly, use'
-          ' ImplicitNavigator.of(context)!.popFromTree() instead.',
+          ' `ImplicitNavigator.of(context)!.pop()` instead.',
         );
       },
     );
@@ -531,14 +606,14 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
       );
     }
     _stack.add(newEntry);
-    if (widget.key is PageStorageKey) {
+    if (widget.maintainHistory) {
       PageStorage.of(context)!.writeState(context, _stack);
     }
     WidgetsBinding.instance!.addPostFrameCallback((_) {
       _onStackChanged();
     });
     PushNotification<T>(
-      currentValue: newEntry.value,
+      valueAfterPop: newEntry.value,
       currentDepth: newEntry.depth,
       previousValue: prevEntry.value,
       previousDepth: prevEntry.depth,
@@ -556,14 +631,14 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
 
   T _popEntry() {
     final ValueHistoryEntry<T> poppedEntry = _stack.removeLast();
-    if (widget.key is PageStorageKey) {
+    if (widget.maintainHistory) {
       PageStorage.of(context)!.writeState(context, _stack);
     }
     WidgetsBinding.instance!.addPostFrameCallback((_) {
       _onStackChanged();
     });
     PopNotification<T>(
-      currentValue: _stack.last.value,
+      valueAfterPop: _stack.last.value,
       currentDepth: _stack.last.depth,
       previousValue: poppedEntry.value,
       previousDepth: poppedEntry.depth,

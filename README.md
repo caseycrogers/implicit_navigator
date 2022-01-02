@@ -1,5 +1,5 @@
-An easy and intuitive navigator that updates the page stack in response to app state changes and the system back button.
-Just build your widget tree and Implicit Navigator will handle the rest!
+A navigator that manages the page stack for you!
+Just build your widget tree and Implicit Navigator will handle the rest.
 
 ## Core Features
 
@@ -12,6 +12,9 @@ state changes
    * **Browser-Style** - back button reverts the last state change
 3. Nesting navigators in the widget tree has first class support with the system back button always popping from the
 inner most navigator first.
+
+Additionally, `ImplicitNavigator.fromValueNotifier` and `ImplicitNavigator.selectFromListenable` provide out-of-the-box ways
+to attach a navigator to a `ValueNotifier` or `Listenable`, respectively.
 
 ## Getting Started
 
@@ -41,7 +44,7 @@ class _AppStyleState extends State<AppStyle> {
           child: Text((index ?? 'Tap To Increment').toString()),
         );
       },
-      onPop: (poppedValue, currentValue) => _index = currentValue,
+      onPop: (poppedValue, valueAfterPop) => _index = valueAfterPop,
     );
   }
 }
@@ -49,7 +52,7 @@ class _AppStyleState extends State<AppStyle> {
 
 `ImplicitNavigator` takes an optional `depth` parameter which represents where the user currently is in the app's
 navigation flow. When the back button is pressed, the app state is returned to the last value of less depth. ie, the
-user moves "up" the navigation flow.
+user moves "up" in the navigation flow.
 
 Using the above example code, imagine a user navigates through the pages as follows:
 
@@ -58,9 +61,10 @@ Using the above example code, imagine a user navigates through the pages as foll
 If the user then presses back, they will go **up** in the navigation flow to depth 0: `depth_0:_index=null`, **not**
 `depth_1:_index=0`.
 
-If Implicit Navigators are nested within each other in the widget tree, you should build each inner navigator with a
-distinct `PageStorageKey`. Implicit Navigator will then cache and restore the history stack using page storage so that,
-if a user navigates away from it and then comes back, it'll retain it's history stack.
+If Implicit Navigators are nested within each other in the widget tree, you should build each inner navigator with
+`MaintainHistory` set to true and a distinct `PageStorageKey`. Implicit Navigator will then cache and restore the
+history stack using page storage so that, if a user navigates away from it and then navigates back, it'll retain it's
+history stack.
 
 ### Browser-Style Navigation
 
@@ -83,14 +87,14 @@ class _BrowserStyleState extends State<BrowserStyle> {
           child: Text((index ?? 'Tap To Increment').toString()),
         );
       },
-      onPop: (poppedValue, currentValue) => _index = currentValue,
+      onPop: (poppedValue, valueAfterPop) => _index = valueAfterPop,
     );
   }
 }
 ```
 
-For browser-style navigation, simply leave `depth` null and **do not** provide a `PageStorageKey` to any nested implicit
-navigators.
+For browser-style navigation, simply leave `depth` null and **do not** set `MaintainHistory` to true on any nested
+implicit navigators.
 
 Repeating the example from above, but with browser style navigation:
 
@@ -104,10 +108,11 @@ Implicit Navigator is built on top of the Flutter Navigator 2.0 API. Implicit Na
 `ValueListenableBuilder`: each one takes in a changing value and a builder. Whenever a new value and/or depth is
 supplied, a new page is added to the internal navigator's page stack. When pop is called (by the system or
 programmatically), the topmost page is popped and the builder is called with the new topmost value. An `onPop` callback
-can be used to revert any state outside of the navigator.
+should be used to revert any state outside of the navigator.
 
-As a convenience method, `ImplicitNavigator.fromNotifier` wraps a `ValueNotifier`. It pushes to the navigator stack when
-the notifier changes and automatically rolls the value of the notifier back when pop is called.
+For convenience, `ImplicitNavigator.fromValueNotifier` and `ImplicitNavigator.selectFromListenable` wrap
+`ValueNotifier` and `ValueListenable`, respectively. They push to the navigator stack when their respective notifier or
+listenable changes.
 
 When the system back button is called (or pop is called programmatically), `ImplicitNavigator` attempts to pop from the
 deepest active navigator in the tree, working it's way up to the root navigator until it finds an active navigator that
@@ -119,6 +124,8 @@ display a back button that is visible whenever **any** Implicit Navigator in the
 
 ## Limitations
 
+* Implicit navigator's page history is updated using the flutter build cycle so if a value changes repeatedly between
+builds, the page history will not include the intermediate values.
 * Implicit Navigator **does not** provide any out of the box tools for routing (eg parsing URLs pushed by the browser or
 handling deep links). This is intentional-routing is highly complex and, in my opinion, well outside of any reasonable
 separation of concerns for a navigator package. To handle routing, use the router of your choice to parse incoming

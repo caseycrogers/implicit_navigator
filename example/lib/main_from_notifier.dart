@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:implicit_navigator/implicit_navigator.dart';
 
 /// This is a version of the Flutter Navigator 2.0 tutorial (sans routing logic)
-/// rebuilt using Implicit Navigator!
+/// rebuilt using Implicit Navigator's `fromValueNotifier` method!
 ///
 /// See:
 /// * https://medium.com/flutter/learning-flutters-new-navigation-and-routing-system-7c9068155ade
@@ -21,13 +21,8 @@ class Book {
   final String author;
 }
 
-class BooksApp extends StatefulWidget {
-  @override
-  State<StatefulWidget> createState() => _BooksAppState();
-}
-
-class _BooksAppState extends State<BooksApp> {
-  Book? _selectedBook;
+class BooksApp extends StatelessWidget {
+  final ValueNotifier<Book?> _selectedBook = ValueNotifier(null);
 
   static const List<Book> books = [
     Book('Left Hand of Darkness', 'Ursula K. Le Guin'),
@@ -39,13 +34,13 @@ class _BooksAppState extends State<BooksApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Books App',
-      home: ImplicitNavigator<Book?>(
-        value: _selectedBook,
+      home: ImplicitNavigator.fromValueNotifier<Book?>(
+        valueNotifier: _selectedBook,
         builder: (context, book, animation, secondaryAnimation) {
           if (book == null) {
             return BooksListScreen(
               books: books,
-              onTapped: _handleBookTapped,
+              onTapped: (newBook) => _selectedBook.value = newBook,
             );
           }
           return BookDetailsScreen(
@@ -54,15 +49,8 @@ class _BooksAppState extends State<BooksApp> {
           );
         },
         transitionsBuilder: ImplicitNavigator.materialRouteTransitionsBuilder,
-        onPop: (poppedBook, currentBook) => _selectedBook = currentBook,
       ),
     );
-  }
-
-  void _handleBookTapped(Book book) {
-    setState(() {
-      _selectedBook = book;
-    });
   }
 }
 

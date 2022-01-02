@@ -95,7 +95,6 @@ class _ImplicitNavigatorRoute<T> extends PageRoute<T> {
   @override
   Duration get transitionDuration => _page.transitionDuration;
 
-
   // These are garbage workarounds to try to prevent the route from taking
   // focus when takeFocus is false.
   // See: https://github.com/flutter/flutter/issues/53441.
