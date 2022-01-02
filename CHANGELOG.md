@@ -45,7 +45,7 @@
 
 ## [1.0.0] - 01/01/2022
 
-* Added `SelectFromListenable` by request of @cldrgaon.
+* Added `SelectFromListenable` by request of @clragon.
 * Added `maintainHistory` to determine if page history should be written and restored instead of using `key`.
 * Renamed `fromNotifier` to `fromValueNotifier`
 * Made `onPop` required for relevant constructors/static methods.
