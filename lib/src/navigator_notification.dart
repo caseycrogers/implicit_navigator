@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:implicit_navigator/implicit_navigator.dart';
 
 /// A notification that is dispatched whenever a [ImplicitNavigator]'s stack
 /// changes.

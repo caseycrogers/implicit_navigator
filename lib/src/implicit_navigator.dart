@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:implicit_navigator/implicit_navigator.dart';
 
 import 'implicit_navigator_page.dart';
 import 'navigator_notification.dart';
