@@ -124,13 +124,14 @@ display a back button that is visible whenever **any** Implicit Navigator in the
 
 ## Limitations
 
-* Implicit navigator's page history is updated using the flutter build cycle so if a value changes repeatedly between
-builds, the page history will not include the intermediate values.
-* Implicit Navigator **does not** provide any out of the box tools for routing (eg parsing URLs pushed by the browser or
-handling deep links). This is intentional-routing is highly complex and, in my opinion, well outside of any reasonable
-separation of concerns for a navigator package. To handle routing, use the router of your choice to parse incoming
-routes and rebuild the widget tree with the new app state according to the incoming routes. `Implicit Navigator` will
-see any relevant state changes and push the appropriate pages in response.
+1. Implicit navigator's page history is updated using the flutter build cycle so if a value changes repeatedly between
+   builds, the page history will not include the intermediate values. This is not fixable for the default constructor
+   but I am looking into fixing this bug for `fromNotifier` and `selectFromListenable`.
+2. Implicit Navigator **does not** provide any out of the box tools for routing (eg parsing URLs pushed by the browser
+   or handling deep links). This is intentional. Routing is highly complex and, in my opinion, well outside of the
+   separation of concerns for a navigator package. To handle routing, use the router of your choice to parse incoming
+   routes and rebuild the widget tree with the new app state according to the incoming routes. `Implicit Navigator` will 
+   see any relevant state changes and push the appropriate pages in response.
 
 ## Contributing
 

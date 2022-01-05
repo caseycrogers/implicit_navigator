@@ -22,8 +22,9 @@ import 'navigator_notification.dart';
 ///    Browser-style is how most web pages behave.
 ///
 /// For app-style navigation, specify non-null values for [depth] to set your
-/// app's navigation hierarchy. Additionally, provide a `PageStorageKey` to any
-/// [ImplicitNavigator] nested inside of another [ImplicitNavigator].
+/// app's navigation hierarchy. Additionally, set [maintainHistory] to true and
+/// provide a `PageStorageKey` to any [ImplicitNavigator] nested inside of
+/// another [ImplicitNavigator].
 /// This ensures that the history of the inner navigator is maintained when the
 /// user navigates away form it and then back to it.
 ///
