@@ -1,3 +1,4 @@
+![](https://github.com/caseycrogers/implicit_navigator/blob/main/implicit_navigator_banner.png)
 A navigator that manages the page stack for you!
 Just build your widget tree and Implicit Navigator will handle the rest.
 

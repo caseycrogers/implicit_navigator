@@ -52,3 +52,7 @@
 * Renamed `currentValue` to `valueAfterPop`.
 * Replaced alternate constructors with static methods and moved logic into wrapping widgets.
 * Added basic unit tests.
+
+## [1.0.1] - 01/01/2022
+
+* Added banner image
