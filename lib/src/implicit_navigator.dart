@@ -566,7 +566,6 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
           builder: widget.builder,
           transitionsBuilder: widget.transitionsBuilder,
           transitionDuration: widget.transitionDuration,
-          takeFocus: widget.takeFocus,
           maintainState: widget.maintainState,
           opaque: widget.opaque,
         );
@@ -578,6 +577,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
           ' `ImplicitNavigator.of(context)!.pop()` instead.',
         );
       },
+      requestFocus: widget.takeFocus,
     );
     if (isRoot) {
       return WillPopScope(

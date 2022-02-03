@@ -39,22 +39,25 @@ class _BooksAppState extends State<BooksApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Books App',
-      home: ImplicitNavigator<Book?>(
-        value: _selectedBook,
-        builder: (context, book, animation, secondaryAnimation) {
-          if (book == null) {
-            return BooksListScreen(
-              books: books,
-              onTapped: _handleBookTapped,
+      home: Scaffold(
+        appBar: AppBar(leading: const ImplicitNavigatorBackButton()),
+        body: ImplicitNavigator<Book?>(
+          value: _selectedBook,
+          builder: (context, book, animation, secondaryAnimation) {
+            if (book == null) {
+              return BooksListScreen(
+                books: books,
+                onTapped: _handleBookTapped,
+              );
+            }
+            return BookDetailsScreen(
+              key: ValueKey(_selectedBook),
+              book: book,
             );
-          }
-          return BookDetailsScreen(
-            key: ValueKey(_selectedBook),
-            book: book,
-          );
-        },
-        transitionsBuilder: ImplicitNavigator.materialRouteTransitionsBuilder,
-        onPop: (poppedBook, currentBook) => _selectedBook = currentBook,
+          },
+          transitionsBuilder: ImplicitNavigator.materialRouteTransitionsBuilder,
+          onPop: (poppedBook, currentBook) => _selectedBook = currentBook,
+        ),
       ),
     );
   }
@@ -77,9 +80,9 @@ class BooksListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: ListView(
+    return Container(
+      color: Theme.of(context).canvasColor,
+      child: ListView(
         children: [
           for (var book in books)
             ListTile(
@@ -103,17 +106,15 @@ class BookDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(leading: const ImplicitNavigatorBackButton()),
-      body: Container(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(book.title, style: Theme.of(context).textTheme.headline6),
-            Text(book.author, style: Theme.of(context).textTheme.subtitle1),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(8),
+      color: Theme.of(context).canvasColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(book.title, style: Theme.of(context).textTheme.headline6),
+          Text(book.author, style: Theme.of(context).textTheme.subtitle1),
+        ],
       ),
     );
   }

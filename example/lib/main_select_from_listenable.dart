@@ -34,23 +34,26 @@ class BooksApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Books App',
-      home: ImplicitNavigator.selectFromListenable<SelectedBook, Book?>(
-        listenable: _selectedBook,
-        selector: () => _selectedBook._book,
-        builder: (context, book, animation, secondaryAnimation) {
-          if (book == null) {
-            return BooksListScreen(
-              books: books,
-              onTapped: (newBook) => _selectedBook.book = newBook,
+      home: Scaffold(
+        body: ImplicitNavigator.selectFromListenable<SelectedBook, Book?>(
+          listenable: _selectedBook,
+          selector: () => _selectedBook._book,
+          builder: (context, book, animation, secondaryAnimation) {
+            if (book == null) {
+              return BooksListScreen(
+                books: books,
+                onTapped: (newBook) => _selectedBook.book = newBook,
+              );
+            }
+            return BookDetailsScreen(
+              key: ValueKey(_selectedBook),
+              book: book,
             );
-          }
-          return BookDetailsScreen(
-            key: ValueKey(_selectedBook),
-            book: book,
-          );
-        },
-        onPop: (poppedBook, bookAfterPop) => _selectedBook.book = bookAfterPop,
-        transitionsBuilder: ImplicitNavigator.materialRouteTransitionsBuilder,
+          },
+          onPop: (poppedBook, bookAfterPop) =>
+              _selectedBook.book = bookAfterPop,
+          transitionsBuilder: ImplicitNavigator.materialRouteTransitionsBuilder,
+        ),
       ),
     );
   }
@@ -67,9 +70,9 @@ class BooksListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: ListView(
+    return Container(
+      color: Theme.of(context).canvasColor,
+      child: ListView(
         children: [
           for (var book in books)
             ListTile(
@@ -93,17 +96,15 @@ class BookDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(leading: const ImplicitNavigatorBackButton()),
-      body: Container(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(book.title, style: Theme.of(context).textTheme.headline6),
-            Text(book.author, style: Theme.of(context).textTheme.subtitle1),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(8),
+      color: Theme.of(context).canvasColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(book.title, style: Theme.of(context).textTheme.headline6),
+          Text(book.author, style: Theme.of(context).textTheme.subtitle1),
+        ],
       ),
     );
   }

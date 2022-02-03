@@ -34,21 +34,24 @@ class BooksApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Books App',
-      home: ImplicitNavigator.fromValueNotifier<Book?>(
-        valueNotifier: _selectedBook,
-        builder: (context, book, animation, secondaryAnimation) {
-          if (book == null) {
-            return BooksListScreen(
-              books: books,
-              onTapped: (newBook) => _selectedBook.value = newBook,
+      home: Scaffold(
+        appBar: AppBar(leading: const ImplicitNavigatorBackButton()),
+        body: ImplicitNavigator.fromValueNotifier<Book?>(
+          valueNotifier: _selectedBook,
+          builder: (context, book, animation, secondaryAnimation) {
+            if (book == null) {
+              return BooksListScreen(
+                books: books,
+                onTapped: (newBook) => _selectedBook.value = newBook,
+              );
+            }
+            return BookDetailsScreen(
+              key: ValueKey(_selectedBook),
+              book: book,
             );
-          }
-          return BookDetailsScreen(
-            key: ValueKey(_selectedBook),
-            book: book,
-          );
-        },
-        transitionsBuilder: ImplicitNavigator.materialRouteTransitionsBuilder,
+          },
+          transitionsBuilder: ImplicitNavigator.materialRouteTransitionsBuilder,
+        ),
       ),
     );
   }
@@ -65,9 +68,9 @@ class BooksListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: ListView(
+    return Container(
+      color: Theme.of(context).canvasColor,
+      child: ListView(
         children: [
           for (var book in books)
             ListTile(
@@ -91,17 +94,15 @@ class BookDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(leading: const ImplicitNavigatorBackButton()),
-      body: Container(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(book.title, style: Theme.of(context).textTheme.headline6),
-            Text(book.author, style: Theme.of(context).textTheme.subtitle1),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(8),
+      color: Theme.of(context).canvasColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(book.title, style: Theme.of(context).textTheme.headline6),
+          Text(book.author, style: Theme.of(context).textTheme.subtitle1),
+        ],
       ),
     );
   }

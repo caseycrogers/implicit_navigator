@@ -56,3 +56,7 @@
 ## [1.0.1] - 01/01/2022
 
 * Added banner image
+
+## [1.0.2] - 01/31/2022
+
+* Use Navigator's `requestFocus` argument
