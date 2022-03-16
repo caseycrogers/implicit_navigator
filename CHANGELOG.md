@@ -56,3 +56,11 @@
 ## [1.0.1] - 01/01/2022
 
 * Added banner image
+
+## [1.0.2] - 01/31/2022
+
+* Use Navigator's `requestFocus` argument
+
+## [1.0.3] - 01/31/2022
+
+* Temporary rollback of 1.0.2 because of a bug in navigator: https://github.com/flutter/flutter/issues/97682
