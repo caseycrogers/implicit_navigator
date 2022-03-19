@@ -221,6 +221,12 @@ class ImplicitNavigator<T> extends StatefulWidget {
     );
   }
 
+  // This state is used by `ImplicitNavigatorBackButton` to tell if the back
+  // button should be displayed.
+  // It is static so that it can be accessed from any location in the widget
+  // tree.
+  static final ValueNotifier<bool> displayBackButton = ValueNotifier(false);
+
   /// A [RouteTransitionsBuilder] that uses the default transitions for the
   /// current platform.
   ///
@@ -384,11 +390,6 @@ class ImplicitNavigator<T> extends StatefulWidget {
 /// The state object allows you to read and manipulate [ImplicitNavigator]'s
 /// internal stack using [navigatorTree]/[history] and [popFromTree].
 class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
-  // This state is used by `ImplicitNavigatorBackButton` to tell if the back
-  // button should be displayed.
-  // It is static so that it can be accessed from any location in the widget
-  // tree.
-  static final ValueNotifier<bool> _displayBackButton = ValueNotifier(false);
   static late VoidCallback _backButtonOnPressed;
 
   ValueNotifier<T>? _valueNotifier;
@@ -402,8 +403,19 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   late final List<ValueHistoryEntry<T>> _stack;
   final Set<ImplicitNavigatorState> _children = {};
 
-  /// The history of values and depths for this implicit navigator.
-  List<ValueHistoryEntry<T>> get history => List.from(_stack);
+  final List<ImplicitLocalHistoryEntry> _localHistoryEntries = [];
+
+  void addLocalHistoryEntry(ImplicitLocalHistoryEntry entry) {
+    assert(entry._owner == null);
+    entry._owner = this;
+    _localHistoryEntries.add(entry);
+  }
+
+  void removeLocalHistoryEntry(ImplicitLocalHistoryEntry entry) {
+    assert(entry._owner == this);
+    _localHistoryEntries.remove(entry);
+    entry._notifyRemoved();
+  }
 
   /// Whether or not this implicit navigator has seen any previous values that
   /// it can pop to.
@@ -447,16 +459,20 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     ];
   }
 
-  bool _canPop = true;
+  bool _isEnabled = true;
+
+  /// Whether or not this implicit navigator and all those below it should
+  /// ignore attempts to pop.
+  bool get isEnabled => _isEnabled;
 
   /// Set whether or not this implicit navigator and all those below it should
   /// ignore attempts to pop (including from the system back button).
   ///
-  /// Set [canPop] to false if you are taking this navigator off stage and do
+  /// Set [isEnabled] to false if you are taking this navigator off stage and do
   /// not want it intercepting calls to pop.
-  set canPop(bool newValue) {
-    if (_canPop != newValue) {
-      _canPop = newValue;
+  set isEnabled(bool newValue) {
+    if (_isEnabled != newValue) {
+      _isEnabled = newValue;
       _onStackChanged();
     }
   }
@@ -464,7 +480,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   /// Whether or not this implicit navigator is enabled AND is currently at the
   /// top of all parent implicit navigator's history stacks.
   bool get isActive {
-    return _canPop &&
+    return _isEnabled &&
         (ModalRoute.of(context)?.isCurrent ?? true) &&
         (isRoot || parent!.isActive);
   }
@@ -489,6 +505,12 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   }
 
   bool _pop() {
+    if (_localHistoryEntries.isNotEmpty) {
+      final ImplicitLocalHistoryEntry poppedEntry =
+      _localHistoryEntries.removeLast();
+      poppedEntry._notifyRemoved();
+      return true;
+    }
     if (_stack.length == 1 || !isActive) {
       return false;
     }
@@ -647,7 +669,13 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   }
 
   void _onStackChanged() {
-    ImplicitNavigatorState._displayBackButton.value =
+    if (!mounted) {
+      // Don't update the back button if this navigator is disposed.
+      // We need this check as `_onStackChanged` is called from a post frame
+      // callback.
+      return;
+    }
+    ImplicitNavigator.displayBackButton.value =
         ImplicitNavigator.of<dynamic>(context, root: true).canPop;
   }
 
@@ -724,32 +752,32 @@ class ImplicitNavigatorBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: ImplicitNavigatorState._displayBackButton,
-      builder: (context, shouldDisplay, backButton) {
-        return AnimatedSwitcher(
-          duration: transitionDuration,
-          child: Visibility(
-            key: ValueKey(shouldDisplay),
-            visible: shouldDisplay,
-            child: backButton!,
+    return SizedBox(
+      child: ValueListenableBuilder<bool>(
+        valueListenable: ImplicitNavigator.displayBackButton,
+        builder: (context, shouldDisplay, backButton) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 100),
+            width: shouldDisplay ? kToolbarHeight : 0,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return Transform.translate(
+                  offset: Offset(
+                    constraints.maxWidth - kToolbarHeight,
+                    0,
+                  ),
+                  child: backButton!,
+                );
+              },
+            ),
+          );
+        },
+        child: SizedBox(
+          width: kToolbarHeight,
+          child: BackButton(
+            // Nested function call to avoid late initialization error.
+            onPressed: () => ImplicitNavigatorState._backButtonOnPressed(),
           ),
-          transitionBuilder: (child, animation) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(-1, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
-        );
-      },
-      child: SizedBox(
-        width: kToolbarHeight,
-        child: BackButton(
-          // Nested function call to avoid late initialization error.
-          onPressed: () => ImplicitNavigatorState._backButtonOnPressed(),
         ),
       ),
     );
@@ -770,5 +798,22 @@ class ValueHistoryEntry<T> {
   @override
   String toString() {
     return '{\'depth\': $depth, \'value:\': $value}';
+  }
+}
+
+class ImplicitLocalHistoryEntry {
+  ImplicitLocalHistoryEntry({this.onRemove});
+
+  final VoidCallback? onRemove;
+
+  ImplicitNavigatorState<dynamic>? _owner;
+
+  void remove() {
+    _owner?.removeLocalHistoryEntry(this);
+    assert(_owner == null);
+  }
+
+  void _notifyRemoved() {
+    onRemove?.call();
   }
 }

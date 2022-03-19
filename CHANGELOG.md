@@ -64,3 +64,8 @@
 ## [1.0.3] - 01/31/2022
 
 * Temporary rollback of 1.0.2 because of a bug in navigator: https://github.com/flutter/flutter/issues/97682
+
+## [1.1.0] - 03/16/2022
+
+* Expose `displayBackButton`
+* Rename `set canPop` to `set isEnabled`
