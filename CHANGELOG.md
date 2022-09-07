@@ -68,4 +68,9 @@
 ## [1.1.0] - 03/16/2022
 
 * Expose `displayBackButton`
-* Rename `set canPop` to `set isEnabled`
+* Rename `set canPop` to `set isEnabled`2
+
+## [1.1.1] - 03/16/2022
+
+* Upgraded dependencies
+* Fixed analysis warnings

@@ -557,7 +557,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     // cached value.
     _addIfNew(newEntry);
     // Ensure this is called even if `addIfNew` did not call it.
-    WidgetsBinding.instance!.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _onStackChanged();
     });
   }
@@ -631,7 +631,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     if (widget.maintainHistory) {
       PageStorage.of(context)!.writeState(context, _stack);
     }
-    WidgetsBinding.instance!.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _onStackChanged();
     });
     PushNotification<T>(
@@ -656,7 +656,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     if (widget.maintainHistory) {
       PageStorage.of(context)!.writeState(context, _stack);
     }
-    WidgetsBinding.instance!.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _onStackChanged();
     });
     PopNotification<T>(
