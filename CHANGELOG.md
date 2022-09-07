@@ -70,7 +70,8 @@
 * Expose `displayBackButton`
 * Rename `set canPop` to `set isEnabled`2
 
-## [1.1.1] - 03/16/2022
+## [1.2.0] - 03/16/2022
 
+* Added local history entries
 * Upgraded dependencies
 * Fixed analysis warnings
