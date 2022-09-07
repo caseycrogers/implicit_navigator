@@ -75,3 +75,8 @@
 * Added local history entries
 * Upgraded dependencies
 * Fixed analysis warnings
+
+## [1.2.1] - 03/16/2022
+
+* Fix bug where back button transition duration was ignored
+* Always display the back button if the transition duration is zero
