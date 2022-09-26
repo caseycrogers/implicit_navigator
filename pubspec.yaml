@@ -2,7 +2,7 @@ name: implicit_navigator
 description: A navigator that manages the page stack for you! Just build your widget tree and Implicit Navigator will handle the rest.
 repository: https://github.com/caseycrogers/implicit_navigator
 
-version: 1.1.0
+version: 1.2.0
 environment:
   sdk: ">=2.12.0 <3.0.0"
 

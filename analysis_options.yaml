@@ -1,6 +1,4 @@
 analyzer:
-  enable-experiment:
-    - nonfunction-type-aliases
   strong-mode:
     implicit-casts: false
     implicit-dynamic: false

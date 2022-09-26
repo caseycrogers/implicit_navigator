@@ -156,6 +156,50 @@ class ImplicitNavigator<T> extends StatefulWidget {
   }
 
   /// Creates an [ImplicitNavigator] that pushes new pages when the
+  /// [valueListenable] changes and calls [onPop] when pages are popped.
+  ///
+  /// This is a convenience method on top of [selectFromListenable].
+  ///
+  /// If non-null, [getDepth] will be called on each value and used to set
+  /// [ImplicitNavigator.depth]. [getDepth] MUST return the same depth for a
+  /// given value every time it's called on that value. If it returns
+  /// inconsistent depths, [ImplicitNavigator] may push redundant pages and will
+  /// not pop pages properly.
+  static Widget fromValueListenable<T>({
+    Key? key,
+    bool maintainHistory = false,
+    required ValueListenable<T> valueListenable,
+    required T Function() selector,
+    int? Function(T value)? getDepth,
+    List<ValueHistoryEntry<T>>? initialHistory,
+    required AnimatedValueWidgetBuilder<T> builder,
+    RouteTransitionsBuilder transitionsBuilder = defaultRouteTransitionsBuilder,
+    Duration transitionDuration = const Duration(milliseconds: 300),
+    required void Function(T, T) onPop,
+    bool takeFocus = false,
+    bool maintainState = true,
+    bool opaque = true,
+    int? popPriority,
+  }) {
+    return selectFromListenable<ValueListenable<T>, T>(
+      key: key,
+      maintainHistory: maintainHistory,
+      listenable: valueListenable,
+      selector: () => valueListenable.value,
+      getDepth: getDepth,
+      initialHistory: initialHistory,
+      builder: builder,
+      transitionsBuilder: transitionsBuilder,
+      transitionDuration: transitionDuration,
+      onPop: onPop,
+      takeFocus: takeFocus,
+      maintainState: maintainState,
+      opaque: opaque,
+      popPriority: popPriority,
+    );
+  }
+
+  /// Creates an [ImplicitNavigator] that pushes new pages when the
   /// [valueNotifier] changes and reverts [valueNotifier.value] when pages are
   /// popped.
   ///
@@ -507,7 +551,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   bool _pop() {
     if (_localHistoryEntries.isNotEmpty) {
       final ImplicitLocalHistoryEntry poppedEntry =
-      _localHistoryEntries.removeLast();
+          _localHistoryEntries.removeLast();
       poppedEntry._notifyRemoved();
       return true;
     }
@@ -557,7 +601,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     // cached value.
     _addIfNew(newEntry);
     // Ensure this is called even if `addIfNew` did not call it.
-    WidgetsBinding.instance!.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _onStackChanged();
     });
   }
@@ -631,7 +675,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     if (widget.maintainHistory) {
       PageStorage.of(context)!.writeState(context, _stack);
     }
-    WidgetsBinding.instance!.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _onStackChanged();
     });
     PushNotification<T>(
@@ -656,7 +700,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     if (widget.maintainHistory) {
       PageStorage.of(context)!.writeState(context, _stack);
     }
-    WidgetsBinding.instance!.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _onStackChanged();
     });
     PopNotification<T>(

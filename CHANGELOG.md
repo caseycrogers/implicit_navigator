@@ -69,3 +69,9 @@
 
 * Expose `displayBackButton`
 * Rename `set canPop` to `set isEnabled`
+
+## [1.3.0] - 09/26/2022
+
+* Added `fromValueListenable` for convenience
+* Appeased the almighty linter, fickle be thy nature
+
