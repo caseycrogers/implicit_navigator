@@ -85,3 +85,8 @@
 
 * Added `fromValueListenable` for convenience
 * Appeased the almighty linter, fickle be thy nature
+
+
+## [1.3.1] - 09/26/2022
+
+* Removed no-op selector from `fromValueListenable`

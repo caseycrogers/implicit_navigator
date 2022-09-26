@@ -169,7 +169,6 @@ class ImplicitNavigator<T> extends StatefulWidget {
     Key? key,
     bool maintainHistory = false,
     required ValueListenable<T> valueListenable,
-    required T Function() selector,
     int? Function(T value)? getDepth,
     List<ValueHistoryEntry<T>>? initialHistory,
     required AnimatedValueWidgetBuilder<T> builder,
