@@ -792,6 +792,9 @@ class ImplicitNavigatorBackButton extends StatelessWidget {
     Key? key,
   }) : super(key: key);
 
+  /// How fast to animate the back button in and out.
+  ///
+  /// If the duration is zero, the back button will always be visible.
   final Duration transitionDuration;
 
   @override
@@ -800,8 +803,12 @@ class ImplicitNavigatorBackButton extends StatelessWidget {
       child: ValueListenableBuilder<bool>(
         valueListenable: ImplicitNavigator.displayBackButton,
         builder: (context, shouldDisplay, backButton) {
+          if (transitionDuration == Duration.zero) {
+            // Don't animate in and out if the transition duration is zero.
+            return backButton!;
+          }
           return AnimatedContainer(
-            duration: const Duration(milliseconds: 100),
+            duration: transitionDuration,
             width: shouldDisplay ? kToolbarHeight : 0,
             child: LayoutBuilder(
               builder: (context, constraints) {

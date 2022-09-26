@@ -70,8 +70,18 @@
 * Expose `displayBackButton`
 * Rename `set canPop` to `set isEnabled`
 
+## [1.2.0] - 03/16/2022
+
+* Added local history entries
+* Upgraded dependencies
+* Fixed analysis warnings
+
+## [1.2.1] - 03/16/2022
+
+* Fix bug where back button transition duration was ignored
+* Always display the back button if the transition duration is zero
+
 ## [1.3.0] - 09/26/2022
 
 * Added `fromValueListenable` for convenience
 * Appeased the almighty linter, fickle be thy nature
-
