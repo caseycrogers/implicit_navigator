@@ -80,7 +80,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     this.initialHistory,
     required this.builder,
     this.transitionsBuilder = defaultRouteTransitionsBuilder,
-    this.transitionDuration = const Duration(milliseconds: 300),
+    this.transitionDuration = _kDefaultTransitionDuration,
     required this.onPop,
     this.takeFocus = false,
     this.maintainState = true,
@@ -125,7 +125,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     List<ValueHistoryEntry<T>>? initialHistory,
     required AnimatedValueWidgetBuilder<T> builder,
     RouteTransitionsBuilder transitionsBuilder = defaultRouteTransitionsBuilder,
-    Duration transitionDuration = const Duration(milliseconds: 300),
+    Duration transitionDuration = _kDefaultTransitionDuration,
     required void Function(T, T) onPop,
     bool takeFocus = false,
     bool maintainState = true,
@@ -173,7 +173,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     List<ValueHistoryEntry<T>>? initialHistory,
     required AnimatedValueWidgetBuilder<T> builder,
     RouteTransitionsBuilder transitionsBuilder = defaultRouteTransitionsBuilder,
-    Duration transitionDuration = const Duration(milliseconds: 300),
+    Duration transitionDuration = _kDefaultTransitionDuration,
     required void Function(T, T) onPop,
     bool takeFocus = false,
     bool maintainState = true,
@@ -215,7 +215,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     List<ValueHistoryEntry<T>>? initialHistory,
     required AnimatedValueWidgetBuilder<T> builder,
     RouteTransitionsBuilder transitionsBuilder = defaultRouteTransitionsBuilder,
-    Duration transitionDuration = const Duration(milliseconds: 300),
+    Duration transitionDuration = _kDefaultTransitionDuration,
     void Function(T, T)? onPop,
     bool takeFocus = false,
     bool maintainState = true,
@@ -288,6 +288,9 @@ class ImplicitNavigator<T> extends StatefulWidget {
           child,
         );
   }
+
+  static const Duration _kDefaultTransitionDuration =
+      Duration(milliseconds: 100);
 
   /// Whether or not this widget should save and restore it's value history to
   /// page storage.
