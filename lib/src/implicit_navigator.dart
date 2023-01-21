@@ -807,7 +807,7 @@ class ImplicitNavigatorBackButton extends StatelessWidget {
         builder: (context, shouldDisplay, backButton) {
           if (transitionDuration == Duration.zero) {
             // Don't animate in and out if the transition duration is zero.
-            return backButton!;
+            return shouldDisplay ? backButton! : Container();
           }
           return AnimatedContainer(
             duration: transitionDuration,
