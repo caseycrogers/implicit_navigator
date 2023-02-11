@@ -100,27 +100,27 @@ class _ImplicitNavigatorRoute<T> extends PageRoute<T> {
   // See: https://github.com/flutter/flutter/issues/53441.
   @override
   TickerFuture didPush() {
-    navigator!.focusScopeNode.canRequestFocus = false;
+    navigator!.focusNode.canRequestFocus = false;
     final ret = super.didPush();
     // Could have a race condition because ret is just waiting on ticker future,
     // NOT waiting on it's callback on top of ticker future.
     // This code assumes that callbacks are called in FIFO order, this may not
     // be a valid assumption.
     ret.whenComplete(() {
-      navigator!.focusScopeNode.canRequestFocus = true;
+      navigator!.focusNode.canRequestFocus = true;
     }); // focusNode.requestFocus());
     return ret;
   }
 
   @override
   void didAdd() {
-    navigator!.focusScopeNode.canRequestFocus = false;
+    navigator!.focusNode.canRequestFocus = false;
     super.didAdd();
     // This probably has a race condition with `TransitionRoute.didAdd`. I don't
     // think there's a way around it because the former is waiting on an
     // internal future that I have no access to.
     TickerFuture.complete().then((value) {
-      return navigator!.focusScopeNode.canRequestFocus = true;
+      return navigator!.focusNode.canRequestFocus = true;
     });
   }
 }
