@@ -622,7 +622,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final PageStorageBucket parentBucket = PageStorage.of(context)!;
+    final PageStorageBucket parentBucket = PageStorage.of(context);
     final Widget internalNavigator = Navigator(
       pages: _stack.map((stackEntry) {
         return ImplicitNavigatorPage<T>(
@@ -675,7 +675,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     }
     _stack.add(newEntry);
     if (widget.maintainHistory) {
-      PageStorage.of(context)!.writeState(context, _stack);
+      PageStorage.of(context).writeState(context, _stack);
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _onStackChanged();
@@ -700,7 +700,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   T _popEntry() {
     final ValueHistoryEntry<T> poppedEntry = _stack.removeLast();
     if (widget.maintainHistory) {
-      PageStorage.of(context)!.writeState(context, _stack);
+      PageStorage.of(context).writeState(context, _stack);
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _onStackChanged();
@@ -841,7 +841,6 @@ class ImplicitNavigatorBackButton extends StatelessWidget {
 /// [ImplicitNavigator.value].
 ///
 /// History entries are used to restore [value] when a page is popped.
-@immutable
 class ValueHistoryEntry<T> {
   const ValueHistoryEntry(this.depth, this.value);
 

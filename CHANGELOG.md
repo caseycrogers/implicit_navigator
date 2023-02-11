@@ -90,3 +90,7 @@
 ## [1.3.1] - 09/26/2022
 
 * Removed no-op selector from `fromValueListenable`
+
+## [1.3.2] - 02/11/2023
+
+* Upgraded flutter version

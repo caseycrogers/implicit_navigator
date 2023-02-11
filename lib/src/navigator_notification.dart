@@ -3,7 +3,6 @@ import 'package:flutter/widgets.dart';
 
 /// A notification that is dispatched whenever a [ImplicitNavigator]'s stack
 /// changes.
-@immutable
 abstract class ImplicitNavigatorNotification<T> extends Notification {
   const ImplicitNavigatorNotification({
     required this.valueAfterPop,
