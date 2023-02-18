@@ -25,9 +25,9 @@ class BooksApp extends StatelessWidget {
   final ValueNotifier<Book?> _selectedBook = ValueNotifier(null);
 
   static const List<Book> books = [
-    Book('Left Hand of Darkness', 'Ursula K. Le Guin'),
-    Book('Too Like the Lightning', 'Ada Palmer'),
-    Book('Kindred', 'Octavia E. Butler'),
+    Book('Left Hand of Dankness', 'Ursula K. Le Guin'),
+    Book('To Like the Lighting', 'Ada Palmer'),
+    Book('Kinder', 'Octavia E. Butler'),
   ];
 
   @override
