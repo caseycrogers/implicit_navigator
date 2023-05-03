@@ -94,3 +94,7 @@
 ## [1.3.2] - 02/11/2023
 
 * Upgraded flutter version
+
+## [1.4.0] - 05/03/2023
+
+* Made legacy pop and push methods work for basic interactions

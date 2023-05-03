@@ -449,20 +449,6 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   late final List<ValueHistoryEntry<T>> _stack;
   final Set<ImplicitNavigatorState> _children = {};
 
-  final List<ImplicitLocalHistoryEntry> _localHistoryEntries = [];
-
-  void addLocalHistoryEntry(ImplicitLocalHistoryEntry entry) {
-    assert(entry._owner == null);
-    entry._owner = this;
-    _localHistoryEntries.add(entry);
-  }
-
-  void removeLocalHistoryEntry(ImplicitLocalHistoryEntry entry) {
-    assert(entry._owner == this);
-    _localHistoryEntries.remove(entry);
-    entry._notifyRemoved();
-  }
-
   /// Whether or not this implicit navigator has seen any previous values that
   /// it can pop to.
   bool get shallowCanPop {
@@ -551,12 +537,6 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   }
 
   bool _pop() {
-    if (_localHistoryEntries.isNotEmpty) {
-      final ImplicitLocalHistoryEntry poppedEntry =
-          _localHistoryEntries.removeLast();
-      poppedEntry._notifyRemoved();
-      return true;
-    }
     if (_stack.length == 1 || !isActive) {
       return false;
     }
@@ -640,11 +620,16 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
         );
       }).toList(),
       onPopPage: (route, dynamic result) {
-        throw AssertionError(
-          'Called Navigator.of(context).pop() on an implicit navigator. This'
-          ' should never be called directly, use'
-          ' `ImplicitNavigator.of(context)!.pop()` instead.',
-        );
+        if (!route.didPop(result)) {
+          // Route handled the pop internally (eg via a will pop scope or
+          // local history entry).
+          return false;
+        }
+        final RouteSettings page = route.settings;
+        if (page is ImplicitNavigatorPage<T>) {
+          return _pop();
+        }
+        return true;
       },
     );
     if (isRoot) {
@@ -850,22 +835,5 @@ class ValueHistoryEntry<T> {
   @override
   String toString() {
     return '{\'depth\': $depth, \'value:\': $value}';
-  }
-}
-
-class ImplicitLocalHistoryEntry {
-  ImplicitLocalHistoryEntry({this.onRemove});
-
-  final VoidCallback? onRemove;
-
-  ImplicitNavigatorState<dynamic>? _owner;
-
-  void remove() {
-    _owner?.removeLocalHistoryEntry(this);
-    assert(_owner == null);
-  }
-
-  void _notifyRemoved() {
-    onRemove?.call();
   }
 }
