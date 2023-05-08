@@ -86,6 +86,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     this.maintainState = true,
     this.opaque = true,
     this.popPriority,
+    this.observers = const [],
   }) : super(key: key);
 
   /// Creates an [ImplicitNavigator] that pushes new pages when a value selected
@@ -131,6 +132,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     bool maintainState = true,
     bool opaque = true,
     int? popPriority,
+    final List<NavigatorObserver> observers = const [],
   }) {
     // Animated builder is actually just a misnamed `ListenableBuilder`.
     return AnimatedBuilder(
@@ -150,6 +152,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
           maintainState: maintainState,
           opaque: opaque,
           popPriority: popPriority,
+          observers: observers,
         );
       },
     );
@@ -179,6 +182,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     bool maintainState = true,
     bool opaque = true,
     int? popPriority,
+    final List<NavigatorObserver> observers = const [],
   }) {
     return selectFromListenable<ValueListenable<T>, T>(
       key: key,
@@ -195,6 +199,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
       maintainState: maintainState,
       opaque: opaque,
       popPriority: popPriority,
+      observers: observers,
     );
   }
 
@@ -221,6 +226,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     bool maintainState = true,
     bool opaque = true,
     int? popPriority,
+    final List<NavigatorObserver> observers = const [],
   }) {
     return ValueListenableBuilder<T>(
       key: key,
@@ -242,6 +248,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
           maintainState: maintainState,
           opaque: opaque,
           popPriority: popPriority,
+          observers: observers,
         );
       },
     );
@@ -396,6 +403,9 @@ class ImplicitNavigator<T> extends StatefulWidget {
   /// navigators at the same depth in the [navigatorTree]-eg if two navigators
   /// are side by side in a [Row].
   final int? popPriority;
+
+  /// See [Navigator.observers].
+  final List<NavigatorObserver> observers;
 
   /// Get the nearest ancestor [ImplicitNavigatorState] in the widget tree.
   static ImplicitNavigatorState<T> of<T>(
@@ -631,6 +641,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
         }
         return true;
       },
+      observers: widget.observers,
     );
     if (isRoot) {
       return WillPopScope(
