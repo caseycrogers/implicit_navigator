@@ -39,7 +39,7 @@ import 'navigator_notification.dart';
 /// Widget build(BuildContext context) {
 ///   return ImplicitNavigator<int>(
 ///     value: _index,
-///     builder: (context, index, animation, secondaryAnimation) {
+///     builder: (context, index) {
 ///       return TextButton(
 ///         onPressed: () => setState(() {
 ///           _index += 1;
@@ -102,7 +102,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
   /// return ImplicitNavigator.selectFromListenable<ScrollController, double>(
   ///   listenable: myTabController,
   ///   selector: () => myTabController.index,
-  ///   builder (context, tabIndex, animation, secondaryAnimation) {
+  ///   builder (context, tabIndex) {
   ///     return MyTabPage(index: tabIndex);
   ///   },
   ///   onPop: (poppedIndex, indexAfterPop) {
@@ -123,7 +123,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     required T Function() selector,
     int? Function(T value)? getDepth,
     List<ValueHistoryEntry<T>>? initialHistory,
-    required AnimatedValueWidgetBuilder<T> builder,
+    required ImplicitPageBuilder<T> builder,
     RouteTransitionsBuilder transitionsBuilder = defaultRouteTransitionsBuilder,
     Duration transitionDuration = _kDefaultTransitionDuration,
     required void Function(T, T) onPop,
@@ -171,7 +171,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     required ValueListenable<T> valueListenable,
     int? Function(T value)? getDepth,
     List<ValueHistoryEntry<T>>? initialHistory,
-    required AnimatedValueWidgetBuilder<T> builder,
+    required ImplicitPageBuilder<T> builder,
     RouteTransitionsBuilder transitionsBuilder = defaultRouteTransitionsBuilder,
     Duration transitionDuration = _kDefaultTransitionDuration,
     required void Function(T, T) onPop,
@@ -213,7 +213,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
     required ValueNotifier<T> valueNotifier,
     int? Function(T value)? getDepth,
     List<ValueHistoryEntry<T>>? initialHistory,
-    required AnimatedValueWidgetBuilder<T> builder,
+    required ImplicitPageBuilder<T> builder,
     RouteTransitionsBuilder transitionsBuilder = defaultRouteTransitionsBuilder,
     Duration transitionDuration = _kDefaultTransitionDuration,
     void Function(T, T)? onPop,
@@ -339,7 +339,7 @@ class ImplicitNavigator<T> extends StatefulWidget {
   ///
   /// Use the `animation` and `secondaryAnimation` arguments to independently
   /// animate widgets within the builder.
-  final AnimatedValueWidgetBuilder<T> builder;
+  final ImplicitPageBuilder<T> builder;
 
   /// A function for animating the widget returned by [builder] in and out.
   final RouteTransitionsBuilder transitionsBuilder;
@@ -725,21 +725,6 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
       });
   }
 }
-
-/// A function that builds a widget from a value and two animations.
-///
-/// It's arguments are a union of [ValueWidgetBuilder] and
-/// [ModalRoute.buildPage].
-///
-/// Use the animation arguments if you want to animate sub-widgets within the
-/// builder independently. To animate the entire builder in and out together,
-/// use [ImplicitNavigator.transitionsBuilder].
-typedef AnimatedValueWidgetBuilder<T> = Widget Function(
-  BuildContext context,
-  T value,
-  Animation<double> animation,
-  Animation<double> secondaryAnimation,
-);
 
 /// A back button that is only visible when an [ImplicitNavigator] has pages it
 /// can pop.

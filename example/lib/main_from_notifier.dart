@@ -36,7 +36,7 @@ class BooksApp extends StatelessWidget {
       title: 'Books App',
       home: ImplicitNavigator.fromValueNotifier<Book?>(
         valueNotifier: _selectedBook,
-        builder: (context, book, animation, secondaryAnimation) {
+        builder: (context, book) {
           if (book == null) {
             return BooksListScreen(
               books: books,

@@ -37,7 +37,7 @@ class BooksApp extends StatelessWidget {
       home: ImplicitNavigator.selectFromListenable<SelectedBook, Book?>(
         listenable: _selectedBook,
         selector: () => _selectedBook._book,
-        builder: (context, book, animation, secondaryAnimation) {
+        builder: (context, book) {
           if (book == null) {
             return BooksListScreen(
               books: books,

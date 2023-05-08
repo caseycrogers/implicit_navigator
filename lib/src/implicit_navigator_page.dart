@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import 'implicit_navigator.dart';
 
@@ -24,7 +24,7 @@ class ImplicitNavigatorPage<T> extends Page<T> {
         );
 
   final T value;
-  final AnimatedValueWidgetBuilder<T> builder;
+  final ImplicitPageBuilder<T> builder;
   final RouteTransitionsBuilder? transitionsBuilder;
 
   final Duration transitionDuration;
@@ -40,7 +40,8 @@ class ImplicitNavigatorPage<T> extends Page<T> {
   }
 }
 
-class _ImplicitNavigatorRoute<T> extends PageRoute<T> {
+class _ImplicitNavigatorRoute<T> extends PageRoute<T>
+    with MaterialRouteTransitionMixin<T> {
   _ImplicitNavigatorRoute(this._page);
 
   final ImplicitNavigatorPage<T> _page;
@@ -49,16 +50,12 @@ class _ImplicitNavigatorRoute<T> extends PageRoute<T> {
   RouteSettings get settings => _page;
 
   @override
-  Widget buildPage(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-  ) {
+  Widget buildContent(BuildContext context) {
     // We intentionally pass the parent bucket through here so that separate
     // implicit navigator pages can share page storage state.
     return PageStorage(
       bucket: _page.bucket,
-      child: _page.builder(context, _page.value, animation, secondaryAnimation),
+      child: _page.builder(context, _page.value),
     );
   }
 
@@ -78,13 +75,7 @@ class _ImplicitNavigatorRoute<T> extends PageRoute<T> {
   }
 
   @override
-  Color? get barrierColor => null;
-
-  @override
   bool get barrierDismissible => false;
-
-  @override
-  String? get barrierLabel => null;
 
   @override
   bool get maintainState => _page.maintainState;
@@ -124,3 +115,6 @@ class _ImplicitNavigatorRoute<T> extends PageRoute<T> {
     });
   }
 }
+
+/// Builds the pages for [ImplicitNavigator].
+typedef ImplicitPageBuilder<T> = Widget Function(BuildContext context, T value);
