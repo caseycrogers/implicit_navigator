@@ -67,7 +67,7 @@ Widget boilerPlate(
                 value = valueAfterPop;
                 notifier.value = value;
               },
-              builder: (context, value, _, __) => TestPage(
+              builder: (context, value) => TestPage(
                 suffix,
                 child: builder?.call(context, value),
                 pageNumber: value,
@@ -79,7 +79,7 @@ Widget boilerPlate(
               maintainHistory: maintainHistory,
               valueNotifier: notifier,
               getDepth: getDepth,
-              builder: (context, value, _, __) => TestPage(
+              builder: (context, value) => TestPage(
                 suffix,
                 child: builder?.call(context, value),
                 pageNumber: value,
@@ -95,7 +95,7 @@ Widget boilerPlate(
                 listenable.value = valueAfterPop;
               },
               getDepth: getDepth,
-              builder: (context, value, _, __) => TestPage(
+              builder: (context, value) => TestPage(
                 suffix,
                 child: builder?.call(context, value),
                 pageNumber: value,

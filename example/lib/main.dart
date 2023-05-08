@@ -41,7 +41,7 @@ class _BooksAppState extends State<BooksApp> {
       title: 'Books App',
       home: ImplicitNavigator<Book?>(
         value: _selectedBook,
-        builder: (context, book, animation, secondaryAnimation) {
+        builder: (context, book) {
           if (book == null) {
             return BooksListScreen(
               books: books,
