@@ -565,14 +565,15 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     if (widget.maintainHistory) {
       assert(
         pageStorage != null,
-        'Could not find a page storage bucket above this implicit navigator.'
-        ' Try wrapping this widget in a`MaterialApp` or `PageStorage` widget.',
+        'Could not find a page storage bucket above this ImplicitNavigator.'
+        ' Try wrapping this widget in a `MaterialApp` or `PageStorage` widget.',
       );
     }
     final dynamic cachedStack = pageStorage?.readState(context);
     if (cachedStack is List<ValueHistoryEntry<T>>) {
       _stack = cachedStack;
-    } else if (widget.initialHistory != null) {
+    } else if (widget.initialHistory != null &&
+        widget.initialHistory!.isNotEmpty) {
       _stack = List.from(widget.initialHistory!);
       // Ensure initial history gets cached.
       pageStorage?.writeState(context, _stack);
