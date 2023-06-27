@@ -256,10 +256,12 @@ class ImplicitNavigator<T> extends StatefulWidget {
 
   /// The default [RouteTransitionsBuilder] used by [ImplicitNavigator] to
   /// animate content in and out.
-  static Widget defaultRouteTransitionsBuilder(BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child,) {
+  static Widget defaultRouteTransitionsBuilder(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
     return FadeTransition(
       opacity: ReverseAnimation(secondaryAnimation),
       child: FadeTransition(
@@ -279,24 +281,23 @@ class ImplicitNavigator<T> extends StatefulWidget {
   /// current platform.
   ///
   /// See [PageTransitionsTheme.buildTransitions].
-  static Widget materialRouteTransitionsBuilder(BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child,) {
-    return Theme
-        .of(context)
-        .pageTransitionsTheme
-        .buildTransitions<dynamic>(
-      ModalRoute.of(context) as PageRoute,
-      context,
-      animation,
-      secondaryAnimation,
-      child,
-    );
+  static Widget materialRouteTransitionsBuilder(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return Theme.of(context).pageTransitionsTheme.buildTransitions<dynamic>(
+          ModalRoute.of(context) as PageRoute,
+          context,
+          animation,
+          secondaryAnimation,
+          child,
+        );
   }
 
   static const Duration _kDefaultTransitionDuration =
-  Duration(milliseconds: 100);
+      Duration(milliseconds: 100);
 
   /// Whether or not this widget should save and restore it's value history to
   /// page storage.
@@ -407,7 +408,8 @@ class ImplicitNavigator<T> extends StatefulWidget {
   final List<NavigatorObserver> observers;
 
   /// Get the nearest ancestor [ImplicitNavigatorState] in the widget tree.
-  static ImplicitNavigatorState<T> of<T>(BuildContext context, {
+  static ImplicitNavigatorState<T> of<T>(
+    BuildContext context, {
     bool root = false,
   }) {
     ImplicitNavigatorState<T>? navigator;
@@ -451,7 +453,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   // Must be a reference and not a getter so that we can call it from `dispose`.
   late final ImplicitNavigatorState? _parent = isRoot
       ? null
-  // Don't use `.of()` here as that'd just return `this`.
+      // Don't use `.of()` here as that'd just return `this`.
       : context.findAncestorStateOfType<ImplicitNavigatorState>();
 
   late final List<ValueHistoryEntry<T>> _stack;
@@ -521,9 +523,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
   /// top of all parent implicit navigator's history stacks.
   bool get isActive {
     return _isEnabled &&
-        (ModalRoute
-            .of(context)
-            ?.isCurrent ?? true) &&
+        (ModalRoute.of(context)?.isCurrent ?? true) &&
         (isRoot || parent!.isActive);
   }
 
@@ -574,9 +574,9 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     final PageStorageBucket? pageStorage = PageStorage.of(context);
     if (widget.maintainHistory) {
       assert(
-      pageStorage != null,
-      'Could not find a page storage bucket above this ImplicitNavigator.'
-          ' Try wrapping this widget in a `MaterialApp` or `PageStorage` widget.',
+        pageStorage != null,
+        'Could not find a page storage bucket above this ImplicitNavigator.'
+        ' Try wrapping this widget in a `MaterialApp` or `PageStorage` widget.',
       );
     }
     final dynamic cachedStack = pageStorage?.readState(context);
@@ -667,7 +667,7 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
     final ValueHistoryEntry<T> prevEntry = _stack.last;
     if (newEntry.depth != null) {
       _stack.removeWhere(
-            (entry) => entry.depth == null || entry.depth! >= newEntry.depth!,
+        (entry) => entry.depth == null || entry.depth! >= newEntry.depth!,
       );
     }
     _stack.add(newEntry);
@@ -719,13 +719,12 @@ class ImplicitNavigatorState<T> extends State<ImplicitNavigator<T>> {
       return;
     }
     ImplicitNavigator.displayBackButton.value =
-        ImplicitNavigator
-            .of<dynamic>(context, root: true)
-            .canPop;
+        ImplicitNavigator.of<dynamic>(context, root: true).canPop;
   }
 
   List<ImplicitNavigatorState> _prioritySorted(
-      List<ImplicitNavigatorState> navigators,) {
+    List<ImplicitNavigatorState> navigators,
+  ) {
     return List.from(navigators)
       ..sort((ImplicitNavigatorState a, ImplicitNavigatorState b) {
         if (a.widget.popPriority == null) {
