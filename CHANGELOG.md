@@ -98,3 +98,8 @@
 ## [1.4.0] - 05/03/2023
 
 * Made legacy pop and push methods work for basic interactions
+
+## [1.4.1] - 05/03/2023
+
+* Make back button fade out when no longer displayed.
+

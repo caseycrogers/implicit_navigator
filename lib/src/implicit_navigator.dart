@@ -791,19 +791,23 @@ class ImplicitNavigatorBackButton extends StatelessWidget {
             // Don't animate in and out if the transition duration is zero.
             return shouldDisplay ? backButton! : Container();
           }
-          return AnimatedContainer(
+          return AnimatedOpacity(
             duration: transitionDuration,
-            width: shouldDisplay ? kToolbarHeight : 0,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Transform.translate(
-                  offset: Offset(
-                    constraints.maxWidth - kToolbarHeight,
-                    0,
-                  ),
-                  child: backButton!,
-                );
-              },
+            opacity: shouldDisplay ?  1 : 0,
+            child: AnimatedContainer(
+              duration: transitionDuration,
+              width: shouldDisplay ? kToolbarHeight : 0,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Transform.translate(
+                    offset: Offset(
+                      constraints.maxWidth - kToolbarHeight,
+                      0,
+                    ),
+                    child: backButton!,
+                  );
+                },
+              ),
             ),
           );
         },
